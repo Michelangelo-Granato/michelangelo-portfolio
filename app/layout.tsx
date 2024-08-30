@@ -38,11 +38,12 @@ export const metadata: Metadata = {
 
 const cx = (...classes) => classes.filter(Boolean).join(' ')
 
-export default function RootLayout({
-  children,
-}: {
+interface LayoutProps {
   children: React.ReactNode
-}) {
+}
+const Layout: React.FC<LayoutProps> = ({
+  children,
+}) => {
   return (
     <html
       lang="en"
@@ -64,3 +65,5 @@ export default function RootLayout({
     </html>
   )
 }
+
+export default Layout;
