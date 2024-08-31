@@ -1,11 +1,13 @@
-import React from 'react';
+'use client';
+import React, { useState } from 'react';
 
 const Skills = () => {
+    const [isOpen, setIsOpen] = useState(false);
     return (
         <section>
             <details>
-                <summary className='text-2xl font-semibold tracking-tighter' style={{ borderBottom: '1px solid #333', width: '100%', display: 'block', padding: '5px' }}>                        
-                    Skills and Education <span className='justify-end text-xl'>{true ? '▼' : '▶'}</span>
+                <summary onClick={() => setIsOpen(!isOpen)} className='text-2xl font-semibold tracking-tighter' style={{ borderBottom: '1px solid #333', width: '100%', display: 'block', padding: '5px' }}>
+                    Skills and Education <span className='justify-end text-xl'>{isOpen ? '▼' : '▶'}</span>
 
                 </summary>
                 <div style={{ padding: '10px' }}>

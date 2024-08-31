@@ -1,10 +1,12 @@
-import type { NextPage } from 'next';
- 
+'use client';
+import { useState } from 'react';
+
 const Contact: React.FC = () => {
+  const [isOpen, setIsOpen] = useState(false)
   return (
     <details>
-          <summary className='text-2xl font-semibold tracking-tighter' style={{ borderBottom: '1px solid #333', width: '100%', display: 'block', padding: '5px' }}>
-            Contact <span className='justify-end text-xl'>{true ? '▼' : '▶'}</span>
+          <summary onClick={() => setIsOpen(!isOpen)} className='text-2xl font-semibold tracking-tighter' style={{ borderBottom: '1px solid #333', width: '100%', display: 'block', padding: '5px' }}>
+            Contact <span className='justify-end text-xl'>{isOpen ? '▼' : '▶'}</span>
           </summary>
           <div style={{ padding: '10px' }}></div>
     <div className="max-w-lg mx-auto p-8 bg-white rounded-lg shadow-md">
