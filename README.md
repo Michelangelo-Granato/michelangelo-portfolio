@@ -1,42 +1,78 @@
-# Portfolio Blog Starter
+# Michelangelo Granato - Portfolio
 
-This is a porfolio site template complete with a blog. Includes:
+A modern, responsive portfolio website built with Next.js and Tailwind CSS.
 
-- MDX and Markdown support
-- Optimized for SEO (sitemap, robots, JSON-LD schema)
-- RSS Feed
-- Dynamic OG images
-- Syntax highlighting
-- Tailwind v4
-- Vercel Speed Insights / Web Analytics
-- Geist font
+## Features
 
-## Demo
+- 🎨 Clean and modern design
+- 🌓 Dark mode support
+- 📱 Fully responsive layout
+- ⚡ Built with Next.js 14
+- 🎯 SEO optimized
+- 📊 Analytics integration
+- 🚀 Performance monitoring
 
-https://portfolio-blog-starter.vercel.app
+## Tech Stack
 
-## How to Use
+- **Framework:** Next.js 14
+- **Styling:** Tailwind CSS
+- **Fonts:** Geist Sans & Geist Mono
+- **Analytics:** Vercel Analytics
+- **Performance:** Vercel Speed Insights
+- **Deployment:** Vercel
 
-You can choose from one of the following two methods to use this repository:
+## Getting Started
 
-### One-Click Deploy
+### Prerequisites
 
-Deploy the example using [Vercel](https://vercel.com?utm_source=github&utm_medium=readme&utm_campaign=vercel-examples):
+- Node.js 18.17 or later
+- npm or yarn
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/vercel/examples/tree/main/solutions/blog&project-name=blog&repository-name=blog)
+### Installation
 
-### Clone and Deploy
-
-Execute [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app) with [pnpm](https://pnpm.io/installation) to bootstrap the example:
-
+1. Clone the repository:
 ```bash
-pnpm create next-app --example https://github.com/vercel/examples/tree/main/solutions/blog blog
+git clone https://github.com/yourusername/michelangelo-portfolio.git
+cd michelangelo-portfolio
 ```
 
-Then, run Next.js in development mode:
-
+2. Install dependencies:
 ```bash
-pnpm dev
+npm install
+# or
+yarn install
 ```
 
-Deploy it to the cloud with [Vercel](https://vercel.com/templates) ([Documentation](https://nextjs.org/docs/app/building-your-application/deploying)).
+3. Run the development server:
+```bash
+npm run dev
+# or
+yarn dev
+```
+
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+## Project Structure
+
+```
+michelangelo-portfolio/
+├── app/
+│   ├── components/
+│   │   ├── contact.tsx
+│   │   ├── footer.tsx
+│   │   ├── nav.tsx
+│   │   └── skills.tsx
+│   ├── layout.tsx
+│   ├── page.tsx
+│   └── global.css
+├── public/
+└── package.json
+```
+
+## Deployment
+
+This project is configured for deployment on Vercel. Simply push to your GitHub repository and connect it to Vercel for automatic deployments.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
