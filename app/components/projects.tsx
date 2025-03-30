@@ -21,7 +21,7 @@ const projects: Project[] = [
         title: "Portfolio Website",
         description: "A modern, responsive portfolio website built with Next.js and Tailwind CSS. Features dark mode, analytics, and performance monitoring.",
         technologies: ["Next.js", "TypeScript", "Tailwind CSS", "Vercel"],
-        githubUrl: "https://github.com/yourusername/michelangelo-portfolio",
+        githubUrl: "https://github.com/Michelangelo-Granato/michelangelo-portfolio",
     },
 
 ];
