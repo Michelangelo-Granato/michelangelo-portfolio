@@ -1,5 +1,6 @@
 import Contact from './components/contact'
 import Skills from './components/skills'
+import Projects from './components/projects'
 
 export default function Page() {
   return (
@@ -48,6 +49,14 @@ export default function Page() {
               <li>Developed full-stack features using Next.js, C# .NET, Kafka, and MongoDB</li>
             </ul>
           </div>
+        </div>
+      </section>
+
+      {/* Projects Section */}
+      <section className="space-y-4">
+        <h2 className="text-2xl font-semibold tracking-tight">Featured Projects</h2>
+        <div className="my-8">
+          <Projects />
         </div>
       </section>
 
