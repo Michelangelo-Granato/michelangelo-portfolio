@@ -1,35 +1,35 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 
 const Skills = () => {
-    const [isOpen, setIsOpen] = useState(false);
-    return (
-        <section>
-            <details>
-                <summary onClick={() => setIsOpen(!isOpen)} className='text-2xl font-semibold tracking-tighter' style={{ borderBottom: '1px solid #333', width: '100%', display: 'block', padding: '5px' }}>
-                    Skills and Education <span className='justify-end text-xl'>{isOpen ? '▼' : '▶'}</span>
+  const skills = {
+    'Programming Languages': ['C#', 'TypeScript', 'JavaScript', 'Java', 'Python', 'C', 'C++'],
+    'Frontend': ['HTML', 'CSS', 'React', 'Next.js'],
+    'Backend': ['.NET Core', 'REST APIs', 'MongoDB', 'MySQL'],
+    'Testing & Quality': ['Jest', 'Cypress', 'NUnit', 'Unit Testing', 'E2E Testing'],
+    'DevOps & Tools': ['Docker', 'Kubernetes', 'Git', 'Azure DevOps', 'Grafana'],
+    'Other Technologies': ['Apache Kafka', 'XML', 'JSON', 'Ajax', 'Swagger']
+  };
 
-                </summary>
-                <div style={{ padding: '10px' }}>
-                    <div >
-                        <h2 className="mb-4 text-xl font-semibold tracking-tighter">Skills</h2>
-                        <ul className="list-disc list-inside">
-                            <li>Full Stack Development</li>
-                            <li>Frontend Technologies (e.g., HTML, CSS, JavaScript)</li>
-                            <li>Backend Technologies (e.g., Node.js, Python)</li>
-                            <li>Database Management (e.g., SQL, MongoDB)</li>
-                            <li>Version Control (e.g., Git)</li>
-                        </ul>
-                    </div>
-                    <div className="my-8">
-                        <h2 className="mb-4 text-xl font-semibold tracking-tighter">Education</h2>
-                        <p>Honours Bachelor's Degree in Computer Science (With Minor in Music :D)</p>
-                        <p>York University, Lassonde School of Engineering</p>
-                    </div>
-                </div>
-            </details>
-        </section>
-    );
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {Object.entries(skills).map(([category, items]) => (
+        <div key={category} className="space-y-2">
+          <h3 className="text-lg font-medium">{category}</h3>
+          <div className="flex flex-wrap gap-2">
+            {items.map((skill) => (
+              <span
+                key={skill}
+                className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-sm"
+              >
+                {skill}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default Skills;
