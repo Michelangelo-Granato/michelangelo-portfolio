@@ -18,7 +18,6 @@ export default function Page() {
           Full-stack developer specializing in React, .NET, and distributed systems
         </p>
       </section>
-
       {/* About Section */}
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold tracking-tight">About Me</h2>
@@ -28,10 +27,23 @@ export default function Page() {
           I have a strong track record of mentoring, leading technical initiatives, and delivering high-quality software solutions.
         </p>
       </section>
-
       {/* Experience Section */}
       <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Experience</h2>
+        <div className="flex items-center space-x-2">
+          <h2 className="text-2xl font-semibold tracking-tight">Experience</h2>
+          <a
+            href="https://drive.google.com/uc?export=download&id=1H4NazlY5fTu5JXDKOHFm89Qgbl6EhuON"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center mt-1 text-blue-600 hover:underline text-base font-normal"
+            title="Download Resume (PDF)"
+          >
+            (Download My Resume)
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 mr-1 text-blue-600 mt-0.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 16V4m0 12l-4-4m4 4l4-4m-8 8h8a2 2 0 002-2V7a2 2 0 00-2-2H8a2 2 0 00-2 2v9a2 2 0 002 2z" />
+            </svg>
+          </a>
+        </div>
         <div className="space-y-8">
           <div>
             <h3 className="text-xl font-medium">Software Developer II</h3>
