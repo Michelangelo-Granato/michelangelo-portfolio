@@ -1,12 +1,16 @@
 import Link from 'next/link'
-
+const showContact = false;
 const navItems = {
   '/': {
     name: 'home',
   },
-  '/contact': {
-    name: 'contact',
-  }
+  ...(showContact
+    ? {
+        '/contact': {
+          name: 'contact',
+        },
+      }
+    : {}),
 }
 
 export function Navbar() {

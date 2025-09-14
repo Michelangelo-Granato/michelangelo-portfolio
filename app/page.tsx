@@ -3,6 +3,7 @@ import Skills from './components/skills'
 import Projects from './components/projects'
 
 export default function Page() {
+  const showContact = false;
   return (
     <div className="space-y-16">
       {/* Hero Section */}
@@ -22,8 +23,8 @@ export default function Page() {
       <section className="space-y-4">
         <h2 className="text-2xl font-semibold tracking-tight">About Me</h2>
         <p className="text-gray-600 dark:text-gray-400">
-          I'm a passionate software developer with expertise in full-stack development and distributed systems. 
-          Currently working at Dayforce, I focus on building scalable microservices and optimizing database performance. 
+          I'm a passionate software developer with expertise in full-stack development and distributed systems.
+          Currently working at Dayforce, I focus on building scalable microservices and optimizing database performance.
           I have a strong track record of mentoring, leading technical initiatives, and delivering high-quality software solutions.
         </p>
       </section>
@@ -93,14 +94,15 @@ export default function Page() {
           <Skills />
         </div>
       </section>
-
       {/* Contact Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Contact</h2>
-        <div className="my-8">
-          <Contact />
-        </div>
-      </section>
+      {showContact && (
+        <section className="space-y-4">
+          <h2 className="text-2xl font-semibold tracking-tight">Contact</h2>
+          <div className="my-8">
+            <Contact />
+          </div>
+        </section>
+      )}
     </div>
   )
 }
