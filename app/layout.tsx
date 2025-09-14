@@ -48,7 +48,7 @@ const Layout: React.FC<LayoutProps> = ({
     <html
       lang="en"
       className={cx(
-        'text-black bg-white dark:text-white dark:bg-black',
+        'text-black bg-white dark:text-gray-300 dark:bg-gray-950',
         GeistSans.variable,
         GeistMono.variable
       )}
