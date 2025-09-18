@@ -10,6 +10,12 @@ interface Project {
 }
 
 const projects: Project[] = [
+    { title: "Androse Cottage",
+        description: "A cozy vacation rental website for a charming cottage in lake muskoka. Built with Next.js and Tailwind CSS, featuring a gallery, booking management system with stripe integration for payments, and google maps api integrations.",
+        technologies: ["React", "Node.js", "PostgresSql", "Tailwind CSS", "Vercel", ],
+        githubUrl: "https://github.com/Michelangelo-Granato/androse-cottage",
+        demoUrl: "https://androse-cottage.vercel.app/"
+    },
     {
         title: "Pairing Picker",
         description: "A web application I built for my partner that parses (a quite hard to read) flight work schedule, organizes it, and allows her to sort and filter it to find the best flights for her",
@@ -22,6 +28,7 @@ const projects: Project[] = [
         description: "A modern, responsive portfolio website built with Next.js and Tailwind CSS. Features dark mode, analytics, and performance monitoring.",
         technologies: ["Next.js", "TypeScript", "Tailwind CSS", "Vercel"],
         githubUrl: "https://github.com/Michelangelo-Granato/michelangelo-portfolio",
+        demoUrl: "https://codebymic.com/",
     },
 
 ];
