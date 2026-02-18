@@ -1,14 +1,13 @@
-'use client';
 import React from 'react';
 
 const Skills = () => {
   const skills = {
-    'Programming Languages': ['C#', 'TypeScript', 'JavaScript', 'Java', 'Python', 'C', 'C++'],
+    'Programming Languages': ['C#', 'TypeScript', 'JavaScript', 'Java', 'Python', 'C', 'C++', 'XML', 'JSON', 'Ajax'],
     'Frontend': ['HTML', 'CSS', 'React', 'Next.js'],
-    'Backend': ['.NET Core', 'REST APIs', 'MongoDB', 'MySQL'],
+    'Backend': ['.NET Core', 'REST APIs', 'MongoDB', 'SQL', 'Kafka'],
     'Testing & Quality': ['Jest', 'Cypress', 'NUnit', 'Unit Testing', 'E2E Testing'],
-    'DevOps & Tools': ['Docker', 'Kubernetes', 'Git', 'Azure DevOps', 'Grafana'],
-    'Other Technologies': ['Apache Kafka', 'XML', 'JSON', 'Ajax', 'Swagger']
+    'DevOps & Tools': ['Docker', 'Kubernetes', 'Git', 'Azure DevOps', 'Grafana', 'Postman', 'Swagger'],
+    'Software & Applications': ['Visual Studio', 'VS Code', 'Jira', 'Confluence', 'MS Excel']
   };
 
   return (
