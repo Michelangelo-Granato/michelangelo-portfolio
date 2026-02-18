@@ -1,80 +1,83 @@
-import Contact from './components/contact'
-import Skills from './components/skills'
-import Projects from './components/projects'
+
+import Link from 'next/link'
 
 export default function Page() {
+  const links = [
+    {
+      name: 'About',
+      url: '/about',
+      external: false,
+      description: 'About Me'
+    },
+    {
+      name: 'Pictures',
+      url: '/pictures',
+      external: false,
+      description: 'Photo Gallery'
+    },
+    {
+      name: 'Projects',
+      url: '/projects',
+      external: false,
+      description: 'My Work'
+    },
+    {
+      name: 'LinkedIn',
+      url: 'https://linkedin.com/in/michelangelo-granato',
+      external: true,
+      description: 'Connect with me'
+    },
+    {
+      name: 'GitHub',
+      url: 'https://github.com/Michelangelo-Granato',
+      external: true,
+      description: 'Check out my code'
+    },
+    {
+      name: 'Watch',
+      url: 'https://watch.codebymic.com',
+      external: true,
+      description: 'My Jellyfin Media Server'
+    },
+    {
+      name: 'Requests',
+      url: 'https://requests.codebymic.com',
+      external: true,
+      description: 'Movie & Show Requests (Seerr)'
+    },
+  ]
+
   return (
-    <div className="space-y-16">
-      {/* Hero Section */}
-      <section className="space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight">
-          Michelangelo Granato
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-200px)] space-y-12 py-12">
+      <section className="text-center space-y-4">
+        <h1 className="text-6xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
+          Mic's Space
         </h1>
-        <p className="text-xl text-gray-600 dark:text-gray-400">
-          Software Developer II at Dayforce
-        </p>
-        <p className="text-gray-600 dark:text-gray-400">
-          Full-stack developer specializing in React, .NET, and distributed systems
+        <p className="text-xl text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
+          TODO: put something nonchalant here
         </p>
       </section>
 
-      {/* About Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">About Me</h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          I'm a passionate software developer with expertise in full-stack development and distributed systems. 
-          Currently working at Dayforce, I focus on building scalable microservices and optimizing database performance. 
-          I have a strong track record of mentoring, leading technical initiatives, and delivering high-quality software solutions.
-        </p>
-      </section>
-
-      {/* Experience Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Experience</h2>
-        <div className="space-y-8">
-          <div>
-            <h3 className="text-xl font-medium">Software Developer II</h3>
-            <p className="text-gray-600 dark:text-gray-400">Dayforce | November 2024 - Present</p>
-            <ul className="mt-2 list-disc list-inside text-gray-600 dark:text-gray-400">
-              <li>Optimized MongoDB queries reducing daily compute time from 3 days to minutes, saving $15,000 monthly</li>
-              <li>Mentored interns in company best practices and development methodologies</li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="text-xl font-medium">Software Developer</h3>
-            <p className="text-gray-600 dark:text-gray-400">Dayforce | January 2024 - November 2024</p>
-            <ul className="mt-2 list-disc list-inside text-gray-600 dark:text-gray-400">
-              <li>Led development of draft application feature with 90%+ test coverage</li>
-              <li>Improved backend logging and monitoring, saving 20 hours per sprint in bug triaging</li>
-              <li>Developed full-stack features using Next.js, C# .NET, Kafka, and MongoDB</li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {/* Projects Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Featured Projects</h2>
-        <div className="my-8">
-          <Projects />
-        </div>
-      </section>
-
-      {/* Skills Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Skills</h2>
-        <div className="my-8">
-          <Skills />
-        </div>
-      </section>
-
-      {/* Contact Section */}
-      <section className="space-y-4">
-        <h2 className="text-2xl font-semibold tracking-tight">Contact</h2>
-        <div className="my-8">
-          <Contact />
-        </div>
-      </section>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-4xl px-4">
+        {links.map((link) => (
+          <Link
+            key={link.name}
+            href={link.url}
+            target={link.external ? '_blank' : undefined}
+            rel={link.external ? 'noopener noreferrer' : undefined}
+            className="group relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 p-6 transition-all hover:shadow-lg hover:border-neutral-300 dark:hover:border-neutral-700"
+          >
+            <div className="flex flex-col space-y-2">
+              <h3 className="text-xl font-semibold text-neutral-900 dark:text-neutral-100 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                {link.name}
+              </h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {link.description}
+              </p>
+            </div>
+          </Link>
+        ))}
+      </div>
     </div>
   )
 }

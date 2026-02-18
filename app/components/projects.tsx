@@ -1,30 +1,7 @@
+
 'use client';
 import React from 'react';
-
-interface Project {
-    title: string;
-    description: string;
-    technologies: string[];
-    githubUrl: string;
-    demoUrl?: string;
-}
-
-const projects: Project[] = [
-    {
-        title: "Pairing Picker",
-        description: "A web application I built for my partner that parses (a quite hard to read) flight work schedule, organizes it, and allows her to sort and filter it to find the best flights for her",
-        technologies: ["React", "Next.js", "Node.js", "TypeScript", "Tailwind CSS", "Vercel"],
-        githubUrl: "https://github.com/Michelangelo-Granato/pairing-picker",
-        demoUrl: "https://pairingpicker.vercel.app/",
-    },
-    {
-        title: "Portfolio Website",
-        description: "A modern, responsive portfolio website built with Next.js and Tailwind CSS. Features dark mode, analytics, and performance monitoring.",
-        technologies: ["Next.js", "TypeScript", "Tailwind CSS", "Vercel"],
-        githubUrl: "https://github.com/Michelangelo-Granato/michelangelo-portfolio",
-    },
-
-];
+import { projects } from '../data/projects';
 
 const Projects: React.FC = () => {
     return (
@@ -82,4 +59,4 @@ const Projects: React.FC = () => {
     );
 };
 
-export default Projects; 
+export default Projects;
