@@ -5,7 +5,7 @@ const albums = [
     {
         title: 'Malawi',
         href: '/pictures/malawi/disposable',
-        cover: '/pictures/malawi/disposable/000094800009.jpg',
+        cover: '/pictures/malawi/disposable/000094800009.webp',
         description: 'Shot on Fujifilm QuickSnap.',
     },
 ]
