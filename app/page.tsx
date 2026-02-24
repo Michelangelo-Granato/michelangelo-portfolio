@@ -54,7 +54,7 @@ export default function Page() {
           Mic's Space
         </h1>
         <p className="text-xl text-gray-600 dark:text-gray-400 max-w-lg mx-auto">
-          TODO: put something nonchalant here
+          Welcome. Here are some things
         </p>
       </section>
 
