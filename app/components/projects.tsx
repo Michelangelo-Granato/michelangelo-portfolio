@@ -5,20 +5,32 @@ import { projects } from '../data/projects';
 
 const Projects: React.FC = () => {
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project, index) => (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
+            {projects.map((project, index) => {
+                const accentColors = ['var(--accent-red)', 'var(--accent-blue)', 'var(--accent-yellow)']
+                const gridColumns = ['span 7 / span 7', 'span 5 / span 5', 'span 12 / span 12']
+                const accentColor = accentColors[index] ?? 'var(--accent-yellow)'
+                const gridColumn = gridColumns[index] ?? 'span 12 / span 12'
+
+                return (
                 <div
-                    key={index}
-                    className="group relative flex flex-col p-6 bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                    key={project.title}
+                    className="surface-card group relative flex flex-col rounded-[30px] p-6 transition-transform duration-200 hover:-translate-y-1 lg:p-8"
+                    style={{ gridColumn }}
                 >
-                    <div className="flex justify-between items-start mb-2">
-                        <h3 className="text-xl font-semibold">{project.title}</h3>
+                    <div className="mb-5 flex items-start justify-between gap-4">
+                        <div>
+                            <p className="retro-label mb-3" style={{ color: accentColor }}>
+                                Selected work
+                            </p>
+                            <h3 className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">{project.title}</h3>
+                        </div>
                         <div className="flex gap-2">
                             <a
                                 href={project.githubUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+                                className="rounded-full border border-[var(--line)] bg-white/45 p-2.5 text-[var(--ink-soft)] transition-colors hover:text-[var(--ink-strong)]"
                                 aria-label="GitHub Repository"
                             >
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -30,7 +42,7 @@ const Projects: React.FC = () => {
                                     href={project.demoUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+                                    className="rounded-full border border-[var(--line)] bg-white/45 p-2.5 text-[var(--ink-soft)] transition-colors hover:text-[var(--ink-strong)]"
                                     aria-label="Live Demo"
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,21 +52,22 @@ const Projects: React.FC = () => {
                             )}
                         </div>
                     </div>
-                    <p className="text-gray-600 dark:text-gray-400 mb-4 flex-grow">
+                    <p className="mb-6 flex-grow max-w-[62ch] text-sm leading-6 text-[var(--ink)] md:text-base">
                         {project.description}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        {project.technologies.map((tech, techIndex) => (
+                        {project.technologies.map((tech) => (
                             <span
-                                key={techIndex}
-                                className="px-2 py-1 text-sm bg-gray-100 dark:bg-gray-700 rounded-full"
+                                key={`${project.title}-${tech}`}
+                                className="rounded-full border border-[var(--line)] bg-white/45 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ink-soft)]"
                             >
                                 {tech}
                             </span>
                         ))}
                     </div>
                 </div>
-            ))}
+                )
+            })}
         </div>
     );
 };

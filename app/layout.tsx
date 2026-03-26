@@ -12,14 +12,14 @@ export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
     default: 'Michelangelo Granato - Portfolio',
-    template: '%s | My Portfolio',
+    template: '%s | Michelangelo Granato',
   },
-  description: 'This is my portfolio.',
+  description: 'Portfolio of Michelangelo Granato, a full-stack developer building clean systems and thoughtful digital products.',
   openGraph: {
-    title: 'My Portfolio',
-    description: 'This is my portfolio.',
+    title: 'Michelangelo Granato - Portfolio',
+    description: 'Full-stack development, selected projects, photography, and writing by Michelangelo Granato.',
     url: baseUrl,
-    siteName: 'My Portfolio',
+    siteName: 'Michelangelo Granato',
     locale: 'en_US',
     type: 'website',
   },
@@ -48,15 +48,23 @@ const Layout: React.FC<LayoutProps> = ({
     <html
       lang="en"
       className={cx(
-        'text-black bg-white dark:text-gray-300 dark:bg-gray-950',
+        'bg-transparent text-[var(--ink)]',
         GeistSans.variable,
         GeistMono.variable
       )}
     >
-      <body className="antialiased max-w-4xl mx-4 mt-8 lg:mx-auto">
-        <main className="flex-auto min-w-0 mt-6 flex flex-col px-4 md:px-0 pt-14">
+      <body className="antialiased">
+        <a
+          href="#content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-full focus:bg-[var(--surface-2)] focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
+        >
+          Skip to content
+        </a>
+        <main id="content" className="min-w-0 px-4 pb-10 pt-24 md:px-6 md:pt-28">
           <Navbar />
-          {children}
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
+            {children}
+          </div>
           <Footer />
           <Analytics />
           <SpeedInsights />
