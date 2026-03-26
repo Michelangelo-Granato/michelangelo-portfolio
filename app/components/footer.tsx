@@ -17,11 +17,21 @@ function ArrowIcon() {
 
 export default function Footer() {
   return (
-    <footer className="mb-16">
-      <ul className="font-sm mt-8 flex flex-row justify-center text-neutral-600 space-x-4 space-y-0 dark:text-neutral-300">
+    <footer className="mx-auto mt-16 w-full max-w-6xl px-4 md:px-6">
+      <div className="surface-panel rounded-[32px] px-6 py-8 md:px-8">
+        <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="retro-label mb-2">Elsewhere</p>
+            <h2 className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">Let’s keep in touch.</h2>
+          </div>
+          <p className="max-w-xl text-sm leading-6 text-[var(--ink-soft)]">
+            Full-stack work, photography, experiments, and notes from the things I build.
+          </p>
+        </div>
+        <ul className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-[var(--ink-soft)]">
         <li>
           <a
-            className="flex items-center transition-all hover:text-neutral-800 dark:hover:text-neutral-100"
+            className="flex items-center transition-all duration-200 hover:-translate-y-0.5 hover:text-[var(--ink-strong)]"
             rel="noopener noreferrer"
             target="_blank"
             href="https://www.linkedin.com/in/michelangelo-granato/"
@@ -32,7 +42,7 @@ export default function Footer() {
         </li>
         <li>
           <a
-            className="flex items-center transition-all hover:text-neutral-800 dark:hover:text-neutral-100"
+            className="flex items-center transition-all duration-200 hover:-translate-y-0.5 hover:text-[var(--ink-strong)]"
             rel="noopener noreferrer"
             target="_blank"
             href="https://github.com/michelangelo-granato"
@@ -43,16 +53,16 @@ export default function Footer() {
         </li>
         <li>
           <a
-            className="flex items-center transition-all hover:text-neutral-800 dark:hover:text-neutral-100"
+            className="flex items-center transition-all duration-200 hover:-translate-y-0.5 hover:text-[var(--ink-strong)]"
             href="mailto:michelangelo.granato.1@gmail.com"
           >
             <ArrowIcon />
-            <p className="ml-2 h-7">send me an email</p>
+            <p className="ml-2 h-7">email</p>
           </a>
         </li>
         <li>
           <a
-            className="flex items-center transition-all hover:text-neutral-800 dark:hover:text-neutral-100"
+            className="flex items-center transition-all duration-200 hover:-translate-y-0.5 hover:text-[var(--ink-strong)]"
             rel="noopener noreferrer"
             target="_blank"
             href="https://github.com/michelangelo-granato/michelangelo-portfolio"
@@ -61,7 +71,12 @@ export default function Footer() {
             <p className="ml-2 h-7">view source</p>
           </a>
         </li>
-      </ul>
+        </ul>
+        <div className="mt-8 flex flex-col gap-2 border-t border-[var(--line)] pt-4 text-xs uppercase tracking-[0.18em] text-[var(--ink-soft)] md:flex-row md:justify-between">
+          <span>Toronto, Ontario</span>
+          <span>Built with Next.js and Tailwind</span>
+        </div>
+      </div>
     </footer>
   )
 }

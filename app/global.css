@@ -1,36 +1,128 @@
 @import 'tailwindcss';
 
 ::selection {
-  background-color: #47a3f3;
-  color: #fefefe;
+  background-color: #b91c1c;
+  color: #f5f5f5;
 }
 
 :root {
+  --page-bg: #ecebe6;
+  --page-bg-alt: #d8d7d0;
+  --surface-0: rgba(250, 250, 246, 0.76);
+  --surface-1: rgba(243, 243, 238, 0.92);
+  --surface-2: rgba(255, 255, 251, 0.96);
+  --surface-3: #c8c7bf;
+  --ink-strong: #121212;
+  --ink: #232523;
+  --ink-soft: #555951;
+  --line: rgba(18, 18, 18, 0.14);
+  --shadow: 0 18px 60px rgba(34, 34, 34, 0.11);
+  --accent-red: #c63b32;
+  --accent-blue: #2d5e9d;
+  --accent-yellow: #d8a62b;
   --sh-class: #2d5e9d;
-  --sh-identifier: #354150;
-  --sh-sign: #8996a3;
-  --sh-string: #007f7a;
-  --sh-keyword: #e02518;
-  --sh-comment: #a19595;
-  --sh-jsxliterals: #6266d1;
-  --sh-property: #e25a1c;
-  --sh-entity: #e25a1c;
+  --sh-identifier: #31353c;
+  --sh-sign: #7a8187;
+  --sh-string: #1d7a68;
+  --sh-keyword: #c63b32;
+  --sh-comment: #8c867f;
+  --sh-jsxliterals: #5b6ab7;
+  --sh-property: #c56a22;
+  --sh-entity: #c56a22;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --sh-class: #4c97f8;
-    --sh-identifier: white;
-    --sh-keyword: #f47067;
-    --sh-string: #0fa295;
+    --page-bg: #e6e4dd;
+    --page-bg-alt: #d1cfc7;
+    --surface-0: rgba(250, 249, 243, 0.82);
+    --surface-1: rgba(244, 243, 236, 0.94);
+    --surface-2: rgba(255, 255, 250, 0.98);
+    --surface-3: #c4c2b8;
+    --ink-strong: #101010;
+    --ink: #1f201f;
+    --ink-soft: #4d5149;
+    --line: rgba(16, 16, 16, 0.14);
+    --shadow: 0 18px 60px rgba(16, 16, 16, 0.1);
+    --sh-class: #2d5e9d;
+    --sh-identifier: #272b31;
+    --sh-keyword: #c63b32;
+    --sh-string: #1d7a68;
   }
   html {
-    color-scheme: dark;
+    color-scheme: light;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
   }
 }
 
 html {
   min-width: 360px;
+  color: var(--ink-strong);
+  background-color: var(--page-bg);
+  background-image:
+    radial-gradient(circle at top left, rgba(45, 94, 157, 0.08), transparent 32%),
+    radial-gradient(circle at top right, rgba(198, 59, 50, 0.08), transparent 30%),
+    linear-gradient(180deg, var(--page-bg), var(--page-bg-alt));
+}
+
+body {
+  color: var(--ink);
+  background-color: transparent;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.18;
+  mix-blend-mode: soft-light;
+}
+
+.surface-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(14px);
+  color: var(--ink);
+}
+
+.surface-card {
+  background: var(--surface-0);
+  border: 1px solid var(--line);
+  box-shadow: 0 10px 28px rgba(25, 25, 25, 0.08);
+  color: var(--ink);
+}
+
+.retro-label {
+  font-size: 0.72rem;
+  line-height: 1;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.accent-rule {
+  height: 4px;
+  width: 72px;
+  background: linear-gradient(90deg, var(--accent-red), var(--accent-yellow), var(--accent-blue));
+}
+
+.accent-dot {
+  display: inline-block;
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 9999px;
+  background: currentColor;
 }
 
 .prose .anchor {
@@ -48,11 +140,18 @@ html {
 }
 
 .prose a {
-  @apply underline transition-all decoration-neutral-400 dark:decoration-neutral-600 underline-offset-2 decoration-[0.1em];
+  @apply underline transition-all underline-offset-2 decoration-[0.1em];
+  color: var(--accent-blue);
+  text-decoration-color: rgba(45, 94, 157, 0.45);
+}
+
+.prose a:hover {
+  color: var(--accent-red);
+  text-decoration-color: rgba(198, 59, 50, 0.5);
 }
 
 .prose .anchor:after {
-  @apply text-neutral-300 dark:text-neutral-700;
+  color: rgba(47, 49, 47, 0.35);
   content: '#';
 }
 
@@ -61,11 +160,14 @@ html {
 }
 
 .prose pre {
-  @apply bg-neutral-50 dark:bg-neutral-900 rounded-lg overflow-x-auto border border-neutral-200 dark:border-neutral-900 py-2 px-3 text-sm;
+  @apply overflow-x-auto rounded-2xl py-3 px-4 text-sm;
+  background: rgba(248, 248, 244, 0.82);
+  border: 1px solid rgba(24, 24, 24, 0.12);
 }
 
 .prose code {
-  @apply px-1 py-0.5 rounded-lg;
+  @apply rounded-md px-1.5 py-0.5;
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .prose pre code {
@@ -84,23 +186,28 @@ html {
 }
 
 .prose p {
-  @apply my-4 text-neutral-800 dark:text-neutral-200;
+  @apply my-4;
+  color: var(--ink);
 }
 
 .prose h1 {
-  @apply text-4xl font-medium tracking-tight mt-6 mb-2;
+  @apply mt-6 mb-2 text-4xl font-semibold tracking-tight;
+  color: var(--ink-strong);
 }
 
 .prose h2 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
+  @apply mt-6 mb-2 text-2xl font-semibold tracking-tight;
+  color: var(--ink-strong);
 }
 
 .prose h3 {
-  @apply text-xl font-medium tracking-tight mt-6 mb-2;
+  @apply mt-6 mb-2 text-xl font-medium tracking-tight;
+  color: var(--ink-strong);
 }
 
 .prose h4 {
-  @apply text-lg font-medium tracking-tight mt-6 mb-2;
+  @apply mt-6 mb-2 text-lg font-medium tracking-tight;
+  color: var(--ink-strong);
 }
 
 .prose strong {

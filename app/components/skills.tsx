@@ -11,22 +11,33 @@ const Skills = () => {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      {Object.entries(skills).map(([category, items]) => (
-        <div key={category} className="space-y-2">
-          <h3 className="text-lg font-medium">{category}</h3>
+    <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+      {Object.entries(skills).map(([category, items], index) => {
+        const accentColors = ['var(--accent-red)', 'var(--accent-blue)', 'var(--accent-yellow)']
+        const accentColor = accentColors[index % accentColors.length]
+
+        return (
+        <div key={category} className="surface-card rounded-[28px] p-5 md:p-6">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h3 className="text-lg font-semibold tracking-tight text-[var(--ink-strong)]">{category}</h3>
+            <span
+              className="accent-dot"
+              style={{ color: accentColor }}
+            ></span>
+          </div>
           <div className="flex flex-wrap gap-2">
             {items.map((skill) => (
               <span
                 key={skill}
-                className="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-full text-sm"
+                className="rounded-full border border-[var(--line)] bg-white/45 px-3 py-1.5 text-sm text-[var(--ink-soft)]"
               >
                 {skill}
               </span>
             ))}
           </div>
         </div>
-      ))}
+        )
+      })}
     </div>
   );
 }

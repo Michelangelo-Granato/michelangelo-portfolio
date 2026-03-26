@@ -10,8 +10,15 @@ const Contact: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement form submission
-    console.log('Form submitted:', formData);
+    const subject = encodeURIComponent(`Portfolio inquiry from ${formData.name}`);
+    const body = encodeURIComponent([
+      `Name: ${formData.name}`,
+      `Email: ${formData.email}`,
+      '',
+      formData.message,
+    ].join('\n'));
+
+    globalThis.location.href = `mailto:michelangelo.granato.1@gmail.com?subject=${subject}&body=${body}`;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -23,24 +30,27 @@ const Contact: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Contact Information */}
-      <div className="space-y-4">
-        <div className="flex flex-wrap gap-4 text-gray-600 dark:text-gray-400 justify-center">
-          <a href="mailto:michelangelo.granato.1@gmail.com" className="hover:text-blue-500 transition-colors">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="surface-card rounded-[26px] p-5 text-sm text-[var(--ink-soft)]">
+          <p className="retro-label mb-2" style={{ color: 'var(--accent-red)' }}>Email</p>
+          <a href="mailto:michelangelo.granato.1@gmail.com" className="font-medium text-[var(--ink-strong)] transition-colors hover:text-[var(--accent-red)]">
             michelangelo.granato.1@gmail.com
           </a>
-          <span>•</span>
-          <span>+1 (647) 390-6776</span>
-          <span>•</span>
-          <span>Toronto, Ontario, Canada</span>
+        </div>
+        <div className="surface-card rounded-[26px] p-5 text-sm text-[var(--ink-soft)]">
+          <p className="retro-label mb-2" style={{ color: 'var(--accent-blue)' }}>Phone</p>
+          <p className="font-medium text-[var(--ink-strong)]">+1 (647) 390-6776</p>
+        </div>
+        <div className="surface-card rounded-[26px] p-5 text-sm text-[var(--ink-soft)]">
+          <p className="retro-label mb-2" style={{ color: 'var(--accent-yellow)' }}>Location</p>
+          <p className="font-medium text-[var(--ink-strong)]">Toronto, Ontario, Canada</p>
         </div>
       </div>
 
-      {/* Contact Form */}
-      <div className="max-w-lg mx-auto">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="surface-panel mx-auto max-w-2xl rounded-[32px] p-6 md:p-8">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="name" className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
               Name
             </label>
             <input
@@ -49,12 +59,12 @@ const Contact: React.FC = () => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700"
+              className="block w-full rounded-2xl border border-[var(--line)] bg-white/60 px-4 py-3 text-[var(--ink-strong)] outline-none transition-colors focus:border-[var(--accent-red)]"
               required
             />
           </div>
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="email" className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
               Email
             </label>
             <input
@@ -63,12 +73,12 @@ const Contact: React.FC = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700"
+              className="block w-full rounded-2xl border border-[var(--line)] bg-white/60 px-4 py-3 text-[var(--ink-strong)] outline-none transition-colors focus:border-[var(--accent-blue)]"
               required
             />
           </div>
           <div>
-            <label htmlFor="message" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            <label htmlFor="message" className="mb-2 block text-sm font-medium text-[var(--ink-strong)]">
               Message
             </label>
             <textarea
@@ -77,13 +87,13 @@ const Contact: React.FC = () => {
               value={formData.message}
               onChange={handleChange}
               rows={4}
-              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700"
+              className="block w-full rounded-2xl border border-[var(--line)] bg-white/60 px-4 py-3 text-[var(--ink-strong)] outline-none transition-colors focus:border-[var(--accent-yellow)]"
               required
             />
           </div>
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+            className="w-full rounded-full bg-[var(--ink-strong)] px-4 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
           >
             Send Message
           </button>
