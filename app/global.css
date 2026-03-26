@@ -54,9 +54,14 @@
   }
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 html {
   min-width: 360px;
-  scroll-behavior: smooth;
   color: var(--ink-strong);
   background-color: var(--page-bg);
   background-image:

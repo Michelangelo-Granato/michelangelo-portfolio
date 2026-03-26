@@ -42,7 +42,7 @@ export function Navbar() {
           </Link>
           <div className="flex flex-wrap items-center gap-1.5 md:gap-2">
             {Object.entries(navItems).map(([path, { name }]) => {
-              const active = pathname === path
+              const active = path === '/' ? pathname === path : pathname === path || pathname.startsWith(path + '/')
               return (
                 <Link
                   key={path}

@@ -60,8 +60,8 @@ const Layout: React.FC<LayoutProps> = ({
         >
           Skip to content
         </a>
+        <Navbar />
         <main id="content" className="min-w-0 px-4 pb-10 pt-24 md:px-6 md:pt-28">
-          <Navbar />
           <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
             {children}
           </div>
