@@ -53,11 +53,11 @@ export default function Page() {
         <div className="surface-panel rounded-[40px] px-6 py-8 md:px-10 md:py-12">
           <p className="retro-label mb-4">Toronto based full-stack developer</p>
           <h1 className="title max-w-4xl text-5xl font-semibold leading-[0.92] tracking-[-0.05em] text-[var(--ink-strong)] md:text-7xl lg:text-[5.5rem]">
-            Clean systems, thoughtful interfaces, and a little PS One energy.
+            Hey, here is some stuff, enjoy.
           </h1>
           <div className="accent-rule my-6"></div>
           <p className="max-w-2xl text-base leading-7 text-[var(--ink)] md:text-lg">
-            I build product-focused web experiences with Next.js, TypeScript, .NET, and distributed systems. This portfolio collects the work, writing, and pictures that matter most.
+            I build product-focused web experiences with Next.js, TypeScript, .NET, and distributed systems. This site is a disorganized collection of the work.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
