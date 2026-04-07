@@ -105,9 +105,6 @@ export default function Page() {
             <p className="retro-label mb-2">Navigation</p>
             <h2 className="text-3xl font-semibold tracking-tight text-[var(--ink-strong)] md:text-4xl">Start anywhere.</h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-[var(--ink-soft)]">
-            The structure is simple on purpose. Every section gets straight to the point.
-          </p>
         </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
