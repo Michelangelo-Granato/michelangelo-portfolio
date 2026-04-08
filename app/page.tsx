@@ -48,16 +48,16 @@ export default function Page() {
   ]
 
   return (
-    <div className="space-y-10 md:space-y-14">
+    <div className="space-y-5 md:space-y-5">
       <section className="grid min-h-[calc(100dvh-12rem)] items-start gap-8 lg:grid-cols-[1.3fr_0.9fr]">
         <div className="surface-panel rounded-[40px] px-6 py-8 md:px-10 md:py-12">
           <p className="retro-label mb-4">Toronto based full-stack developer</p>
           <h1 className="title max-w-4xl text-5xl font-semibold leading-[0.92] tracking-[-0.05em] text-[var(--ink-strong)] md:text-7xl lg:text-[5.5rem]">
-            Hey, here is some stuff, enjoy.
+            Hey! here is some stuff, please enjoy.
           </h1>
           <div className="accent-rule my-6"></div>
           <p className="max-w-2xl text-base leading-7 text-[var(--ink)] md:text-lg">
-            I build product-focused web experiences with Next.js, TypeScript, .NET, and distributed systems. This site is a disorganized collection of the work.
+            I build product-focused web experiences with Next.js, TypeScript, .NET, and distributed systems. This site is a disorganized collection of my work.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
@@ -105,9 +105,6 @@ export default function Page() {
             <p className="retro-label mb-2">Navigation</p>
             <h2 className="text-3xl font-semibold tracking-tight text-[var(--ink-strong)] md:text-4xl">Start anywhere.</h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-[var(--ink-soft)]">
-            The structure is simple on purpose. Every section gets straight to the point.
-          </p>
         </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

@@ -1,21 +1,18 @@
-
-import Contact from '../components/contact'
+import Contact from '../components/contact';
 
 export default function Page() {
     return (
-        <div className="space-y-10 md:space-y-14">
-            <section className="surface-panel rounded-[40px] px-6 py-8 md:px-10 md:py-12">
-                <p className="retro-label mb-4">Contact</p>
-                <h1 className="text-5xl font-semibold tracking-[-0.05em] text-[var(--ink-strong)] md:text-6xl">Get in touch</h1>
-                <div className="accent-rule my-6"></div>
-                <p className="max-w-2xl text-xl text-[var(--ink)]">
-                    Get in touch with me.
-                </p>
+        <div className="space-y-6 md:space-y-8">
+            <section className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+                <div>
+                    <p className="retro-label mb-2">Contact</p>
+                    <h1 className="text-3xl font-semibold tracking-[-0.05em] text-[var(--ink-strong)] md:text-5xl">
+                        Have a project in mind? Or just want to say hello? Reach out!
+                    </h1>
+                </div>
             </section>
 
-            <div className="my-8">
-                <Contact />
-            </div>
+            <Contact />
         </div>
-    )
+    );
 }

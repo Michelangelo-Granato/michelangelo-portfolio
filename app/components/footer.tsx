@@ -17,7 +17,7 @@ function ArrowIcon() {
 
 export default function Footer() {
   return (
-    <footer className="mx-auto mt-16 w-full max-w-6xl px-4 md:px-6">
+    <footer className="mt-16 w-full">
       <div className="surface-panel rounded-[32px] px-6 py-8 md:px-8">
         <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
