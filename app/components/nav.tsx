@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useTheme } from 'next-themes'
+import { useEffect, useState } from 'react'
 
 const navItems = {
   '/': {
@@ -23,6 +25,11 @@ const navItems = {
 
 export function Navbar() {
   const pathname = usePathname()
+  const { theme, resolvedTheme, setTheme } = useTheme()
+  const current = resolvedTheme || theme
+  const toggleTheme = () => setTheme(current === 'dark' ? 'light' : 'dark')
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   return (
     <nav
@@ -60,6 +67,34 @@ export function Navbar() {
                   </Link>
                 )
               })}
+                <button
+                  onClick={toggleTheme}
+                  aria-label="Toggle dark mode"
+                  className="ml-1 rounded-full p-2 text-sm transition-colors hover:bg-[var(--surface-2)]"
+                >
+                  {!mounted ? (
+                    /* Render a stable placeholder server-side to avoid hydration mismatch */
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  ) : current === 'dark' ? (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <path d="M12 4.5V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M12 22v-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M4.5 12H2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M22 12h-2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M5.6 5.6L4.2 4.2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M19.8 19.8l-1.4-1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M19.8 4.2l-1.4 1.4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M5.6 18.4L4.2 19.8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <circle cx="12" cy="12" r="3.2" stroke="currentColor" strokeWidth="1.5"/>
+                    </svg>
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
+                      <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  )}
+                </button>
             </div>
           </div>
         </div>

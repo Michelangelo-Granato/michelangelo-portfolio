@@ -21,7 +21,6 @@ export default function Footer() {
       <div className="surface-panel rounded-[32px] px-6 py-8 md:px-8">
         <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <p className="retro-label mb-2">Elsewhere</p>
             <h2 className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">Let’s keep in touch.</h2>
           </div>
           <p className="max-w-xl text-sm leading-6 text-[var(--ink-soft)]">

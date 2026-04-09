@@ -21,7 +21,7 @@ const Projects: React.FC = () => {
                     <div className="mb-5 flex items-start justify-between gap-4">
                         <div>
                             <p className="retro-label mb-3" style={{ color: accentColor }}>
-                                Selected work
+                                Stuff I've built
                             </p>
                             <h3 className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">{project.title}</h3>
                         </div>
@@ -56,14 +56,24 @@ const Projects: React.FC = () => {
                         {project.description}
                     </p>
                     <div className="flex flex-wrap gap-2">
-                        {project.technologies.map((tech) => (
-                            <span
-                                key={`${project.title}-${tech}`}
-                                className="rounded-full border border-[var(--line)] bg-white/45 px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ink-soft)]"
-                            >
-                                {tech}
-                            </span>
-                        ))}
+                        {project.technologies.map((tech, techIndex) => {
+                            const techAccent = accentColors[techIndex % accentColors.length]
+
+                            return (
+                                <span
+                                    key={`${project.title}-${tech}`}
+                                    className="rounded-full px-3 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ink-strong)]"
+                                    style={{
+                                        borderWidth: '1px',
+                                        borderStyle: 'solid',
+                                        borderColor: `color-mix(in srgb, ${techAccent} 42%, var(--line))`,
+                                        background: `color-mix(in srgb, ${techAccent} 22%, transparent)`,
+                                    }}
+                                >
+                                    {tech}
+                                </span>
+                            )
+                        })}
                     </div>
                 </div>
                 )
