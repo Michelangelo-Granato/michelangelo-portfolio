@@ -7,6 +7,7 @@ import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/next'
 import Footer from './components/footer'
 import { baseUrl } from './sitemap'
+import { ThemeProvider } from 'next-themes'
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
@@ -47,6 +48,7 @@ const Layout: React.FC<LayoutProps> = ({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={cx(
         'bg-transparent text-[var(--ink)]',
         GeistSans.variable,
@@ -54,21 +56,23 @@ const Layout: React.FC<LayoutProps> = ({
       )}
     >
       <body className="antialiased">
-        <a
-          href="#content"
-          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-full focus:bg-[var(--surface-2)] focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
-        >
-          Skip to content
-        </a>
-        <Navbar />
-        <main id="content" className="min-w-0 px-4 pb-10 pt-24 md:px-6 md:pt-28">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
-            {children}
-            <Footer />
-          </div>
-          <Analytics />
-          <SpeedInsights />
-        </main>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <a
+            href="#content"
+            className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-full focus:bg-[var(--surface-2)] focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
+          >
+            Skip to content
+          </a>
+          <Navbar />
+          <main id="content" className="min-w-0 px-4 pb-10 pt-24 md:px-6 md:pt-28">
+            <div className="mx-auto flex w-full max-w-6xl flex-col gap-10">
+              {children}
+              <Footer />
+            </div>
+            <Analytics />
+            <SpeedInsights />
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   )

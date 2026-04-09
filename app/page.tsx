@@ -62,13 +62,25 @@ export default function Page() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/projects"
-              className="rounded-full bg-[var(--ink-strong)] px-5 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
+              className="rounded-full px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] transition-transform duration-200 hover:-translate-y-0.5"
+              style={{
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: 'color-mix(in srgb, var(--accent-red) 42%, var(--line))',
+                background: 'color-mix(in srgb, var(--accent-red) 22%, transparent)',
+              }}
             >
               View projects
             </Link>
             <Link
               href="/about"
-              className="rounded-full border border-[var(--line)] bg-white/45 px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] transition-transform duration-200 hover:-translate-y-0.5"
+              className="rounded-full px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] transition-transform duration-200 hover:-translate-y-0.5"
+              style={{
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: 'color-mix(in srgb, var(--accent-blue) 42%, var(--line))',
+                background: 'color-mix(in srgb, var(--accent-blue) 22%, transparent)',
+              }}
             >
               About me
             </Link>

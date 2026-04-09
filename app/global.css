@@ -54,6 +54,24 @@
   }
 }
 
+/* Dark theme when toggled by client (html.dark) */
+html.dark {
+  --page-bg: #0b0f14;
+  --page-bg-alt: #07090b;
+  --surface-0: rgba(12,12,14,0.72);
+  --surface-1: rgba(14,14,16,0.88);
+  --surface-2: rgba(10,10,12,0.98);
+  --surface-3: #0b0c0e;
+  --ink-strong: #f3f4f6;
+  --ink: #dbe4eb;
+  --ink-soft: #98a0aa;
+  --line: rgba(255,255,255,0.06);
+  --shadow: 0 18px 60px rgba(2,6,23,0.6);
+  --accent-red: #ff8b8b;
+  --accent-blue: #7ab0ff;
+  --accent-yellow: #f0c95a;
+}
+
 @media (prefers-reduced-motion: no-preference) {
   html {
     scroll-behavior: smooth;
