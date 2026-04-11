@@ -10,6 +10,8 @@ const Skills = () => {
     'Software & Applications': ['Visual Studio', 'VS Code', 'Jira', 'Confluence', 'MS Excel']
   };
 
+  let runningSkillIndex = 0
+
   return (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       {Object.entries(skills).map(([category, items], index) => {
@@ -26,14 +28,25 @@ const Skills = () => {
             ></span>
           </div>
           <div className="flex flex-wrap gap-2">
-            {items.map((skill) => (
-              <span
-                key={skill}
-                className="rounded-full border border-[var(--line)] bg-white/45 px-3 py-1.5 text-sm text-[var(--ink-soft)]"
-              >
-                {skill}
-              </span>
-            ))}
+            {items.map((skill) => {
+              const skillAccent = accentColors[runningSkillIndex % accentColors.length]
+              runningSkillIndex += 1
+
+              return (
+                <span
+                  key={skill}
+                  className="rounded-full px-3 py-1.5 text-sm text-[var(--ink-strong)]"
+                  style={{
+                    borderWidth: '1px',
+                    borderStyle: 'solid',
+                    borderColor: `color-mix(in srgb, ${skillAccent} 42%, var(--line))`,
+                    background: `color-mix(in srgb, ${skillAccent} 22%, transparent)`,
+                  }}
+                >
+                  {skill}
+                </span>
+              )
+            })}
           </div>
         </div>
         )

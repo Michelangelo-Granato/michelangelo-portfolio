@@ -4,13 +4,24 @@ import React from 'react';
 import { projects } from '../data/projects';
 
 const Projects: React.FC = () => {
+    const accentColors = ['var(--accent-red)', 'var(--accent-blue)', 'var(--accent-yellow)']
+    let runningLinkIndex = 0
+
     return (
         <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
             {projects.map((project, index) => {
-                const accentColors = ['var(--accent-red)', 'var(--accent-blue)', 'var(--accent-yellow)']
                 const gridColumns = ['span 7 / span 7', 'span 5 / span 5', 'span 12 / span 12']
                 const accentColor = accentColors[index] ?? 'var(--accent-yellow)'
                 const gridColumn = gridColumns[index] ?? 'span 12 / span 12'
+                const githubAccent = accentColors[runningLinkIndex % accentColors.length]
+                runningLinkIndex += 1
+                const demoAccent = project.demoUrl
+                    ? accentColors[runningLinkIndex % accentColors.length]
+                    : null
+
+                if (project.demoUrl) {
+                    runningLinkIndex += 1
+                }
 
                 return (
                 <div
@@ -30,7 +41,13 @@ const Projects: React.FC = () => {
                                 href={project.githubUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="rounded-full border border-[var(--line)] bg-white/45 p-2.5 text-[var(--ink-soft)] transition-colors hover:text-[var(--ink-strong)]"
+                                className="rounded-full p-2.5 text-[var(--ink-soft)] transition-colors hover:text-[var(--ink-strong)]"
+                                style={{
+                                    borderWidth: '1px',
+                                    borderStyle: 'solid',
+                                    borderColor: `color-mix(in srgb, ${githubAccent} 42%, var(--line))`,
+                                    background: `color-mix(in srgb, ${githubAccent} 22%, transparent)`,
+                                }}
                                 aria-label="GitHub Repository"
                             >
                                 <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
@@ -42,7 +59,13 @@ const Projects: React.FC = () => {
                                     href={project.demoUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="rounded-full border border-[var(--line)] bg-white/45 p-2.5 text-[var(--ink-soft)] transition-colors hover:text-[var(--ink-strong)]"
+                                    className="rounded-full p-2.5 text-[var(--ink-soft)] transition-colors hover:text-[var(--ink-strong)]"
+                                    style={{
+                                        borderWidth: '1px',
+                                        borderStyle: 'solid',
+                                        borderColor: demoAccent ? `color-mix(in srgb, ${demoAccent} 42%, var(--line))` : 'var(--line)',
+                                        background: demoAccent ? `color-mix(in srgb, ${demoAccent} 22%, transparent)` : 'transparent',
+                                    }}
                                     aria-label="Live Demo"
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
