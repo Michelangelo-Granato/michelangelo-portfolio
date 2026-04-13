@@ -22,6 +22,12 @@ export default function Page() {
       description: 'My Work'
     },
     {
+      name: 'Server',
+      url: '/server',
+      external: false,
+      description: 'Home lab, media stack, and homelab dashboard'
+    },
+    {
       name: 'LinkedIn',
       url: 'https://linkedin.com/in/michelangelo-granato',
       external: true,
@@ -71,6 +77,18 @@ export default function Page() {
               }}
             >
               View projects
+            </Link>
+            <Link
+              href="/server"
+              className="rounded-full px-5 py-3 text-sm font-semibold text-[var(--ink-strong)] transition-transform duration-200 hover:-translate-y-0.5"
+              style={{
+                borderWidth: '1px',
+                borderStyle: 'solid',
+                borderColor: 'color-mix(in srgb, var(--accent-yellow) 42%, var(--line))',
+                background: 'color-mix(in srgb, var(--accent-yellow) 22%, transparent)',
+              }}
+            >
+              Home server
             </Link>
             <Link
               href="/about"
