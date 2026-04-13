@@ -25,7 +25,7 @@ export default function Page() {
       name: 'Server',
       url: '/server',
       external: false,
-      description: 'Home lab, media stack, and homelab dashboard'
+      description: 'Homelab, media stack, and server dashboard'
     },
     {
       name: 'LinkedIn',

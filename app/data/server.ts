@@ -201,7 +201,7 @@ export const fallbackServerDashboard: ServerDashboardData = {
       accent: 'yellow',
     },
     {
-      title: 'Fulfilment trends',
+      title: 'Fulfillment trends',
       value: 'Approvals + turnaround',
       description: 'A compact place to show total completed requests, average turnaround time, and approval rate.',
       accent: 'red',
