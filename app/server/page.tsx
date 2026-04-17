@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { getServerDashboardData } from 'app/lib/server-dashboard'
+import type { DashboardSnapshot } from 'app/lib/server-dashboard-snapshot'
 
 export const metadata: Metadata = {
   title: 'Home Server',
@@ -83,6 +84,13 @@ type FlowConnection = {
   accent: FlowAccent
   dashed?: boolean
   markerEnd?: string
+}
+
+type HistoryPoint = DashboardSnapshot['history'][number]
+
+type TimeSeriesValue = {
+  label: string
+  value: number | null
 }
 
 const stackFlowNodes: readonly FlowNode[] = [
@@ -378,8 +386,388 @@ function StackFlowDiagram() {
   )
 }
 
+function formatCompactNumber(value: number | null, fallback: string) {
+  if (value === null || !Number.isFinite(value)) {
+    return fallback
+  }
+
+  return new Intl.NumberFormat('en-US', {
+    notation: value >= 1000 ? 'compact' : 'standard',
+    maximumFractionDigits: value >= 100 ? 0 : 1,
+  }).format(value)
+}
+
+function formatBytesPerSecond(value: number | null, fallback: string) {
+  if (value === null || !Number.isFinite(value)) {
+    return fallback
+  }
+
+  const units = ['B/s', 'KB/s', 'MB/s', 'GB/s']
+  let size = value
+  let unitIndex = 0
+
+  while (size >= 1024 && unitIndex < units.length - 1) {
+    size /= 1024
+    unitIndex += 1
+  }
+
+  return `${new Intl.NumberFormat('en-US', {
+    maximumFractionDigits: unitIndex === 0 ? 0 : 1,
+  }).format(size)} ${units[unitIndex]}`
+}
+
+function formatHistoryLabel(timestamp: string) {
+  const date = new Date(timestamp)
+
+  if (Number.isNaN(date.getTime())) {
+    return ''
+  }
+
+  return new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date)
+}
+
+function takeRecentHistory(snapshot: DashboardSnapshot | null, count = 24) {
+  return snapshot?.history.slice(-count) ?? []
+}
+
+function buildSeries(history: HistoryPoint[], selectValue: (point: HistoryPoint) => number | null): TimeSeriesValue[] {
+  return history.map((point) => ({
+    label: formatHistoryLabel(point.timestamp),
+    value: selectValue(point),
+  }))
+}
+
+function buildLinePath(series: TimeSeriesValue[], width: number, height: number, inset = 18) {
+  const numericValues = series
+    .map((point) => point.value)
+    .filter((value): value is number => typeof value === 'number' && Number.isFinite(value))
+
+  if (numericValues.length === 0) {
+    return ''
+  }
+
+  const minValue = Math.min(...numericValues)
+  const maxValue = Math.max(...numericValues)
+  const range = maxValue - minValue || 1
+  const chartWidth = width - inset * 2
+  const chartHeight = height - inset * 2
+
+  let path = ''
+
+  series.forEach((point, index) => {
+    if (point.value === null || !Number.isFinite(point.value)) {
+      return
+    }
+
+    const x = inset + (chartWidth * index) / Math.max(series.length - 1, 1)
+    const y = inset + chartHeight - ((point.value - minValue) / range) * chartHeight
+    path += `${path ? ' L' : 'M'}${x.toFixed(2)} ${y.toFixed(2)}`
+  })
+
+  return path
+}
+
+function buildAreaPath(series: TimeSeriesValue[], width: number, height: number, inset = 18) {
+  const linePath = buildLinePath(series, width, height, inset)
+
+  if (!linePath) {
+    return ''
+  }
+
+  const numericIndices = series
+    .map((point, index) => (point.value === null || !Number.isFinite(point.value) ? null : index))
+    .filter((index): index is number => index !== null)
+
+  if (numericIndices.length === 0) {
+    return ''
+  }
+
+  const chartWidth = width - inset * 2
+  const baseline = height - inset
+  const firstX = inset + (chartWidth * numericIndices[0]) / Math.max(series.length - 1, 1)
+  const lastIndex = numericIndices.at(-1) ?? numericIndices[0]
+  const lastX = inset + (chartWidth * lastIndex) / Math.max(series.length - 1, 1)
+
+  return `${linePath} L${lastX.toFixed(2)} ${baseline.toFixed(2)} L${firstX.toFixed(2)} ${baseline.toFixed(2)} Z`
+}
+
+function HistoryAxisLabels({ series }: Readonly<{ series: TimeSeriesValue[] }>) {
+  if (series.length === 0) {
+    return null
+  }
+
+  const picks = [0, Math.floor((series.length - 1) / 2), series.length - 1]
+  const uniquePicks = Array.from(new Set(picks))
+
+  return (
+    <div className="mt-4 flex items-center justify-between text-[10px] uppercase tracking-[0.18em] text-[var(--ink-soft)]">
+      {uniquePicks.map((index) => (
+        <span key={`${series[index]?.label}-${index}`}>{series[index]?.label || '--'}</span>
+      ))}
+    </div>
+  )
+}
+
+function HistoryChart({
+  primary,
+  secondary,
+  primaryAccent,
+  secondaryAccent,
+  height = 192,
+}: Readonly<{
+  primary: TimeSeriesValue[]
+  secondary?: TimeSeriesValue[]
+  primaryAccent: FlowAccent
+  secondaryAccent?: FlowAccent
+  height?: number
+}>) {
+  const width = 760
+  const primaryAreaPath = buildAreaPath(primary, width, height)
+  const primaryLinePath = buildLinePath(primary, width, height)
+  const secondaryLinePath = secondary ? buildLinePath(secondary, width, height) : ''
+
+  return (
+    <div className="overflow-hidden rounded-[28px] border border-[var(--line)] p-3" style={{ background: 'var(--surface-2)' }}>
+      <svg viewBox={`0 0 ${width} ${height}`} className="block h-auto w-full" aria-hidden>
+        <defs>
+          <linearGradient id="telemetry-area-blue" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent-blue)" stopOpacity="0.28" />
+            <stop offset="100%" stopColor="var(--accent-blue)" stopOpacity="0.03" />
+          </linearGradient>
+          <linearGradient id="telemetry-area-red" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent-red)" stopOpacity="0.24" />
+            <stop offset="100%" stopColor="var(--accent-red)" stopOpacity="0.02" />
+          </linearGradient>
+          <linearGradient id="telemetry-area-yellow" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="var(--accent-yellow)" stopOpacity="0.22" />
+            <stop offset="100%" stopColor="var(--accent-yellow)" stopOpacity="0.02" />
+          </linearGradient>
+        </defs>
+
+        {[0.2, 0.5, 0.8].map((ratio) => (
+          <path
+            key={ratio}
+            d={`M18 ${(height - 36) * ratio + 18} H${width - 18}`}
+            style={{ stroke: 'var(--line)', strokeWidth: 1, opacity: 0.5 }}
+          />
+        ))}
+
+        {primaryAreaPath && (
+          <path
+            d={primaryAreaPath}
+            style={{ fill: `url(#telemetry-area-${primaryAccent})` }}
+          />
+        )}
+        {primaryLinePath && (
+          <path
+            d={primaryLinePath}
+            style={{ fill: 'none', stroke: accentMap[primaryAccent], strokeWidth: 3, strokeLinecap: 'round', strokeLinejoin: 'round' }}
+          />
+        )}
+        {secondaryLinePath && secondaryAccent && (
+          <path
+            d={secondaryLinePath}
+            style={{
+              fill: 'none',
+              stroke: accentMap[secondaryAccent],
+              strokeWidth: 2.2,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round',
+              strokeDasharray: '7 8',
+              opacity: 0.92,
+            }}
+          />
+        )}
+      </svg>
+      <HistoryAxisLabels series={primary} />
+    </div>
+  )
+}
+
+function HistoryLegend({
+  items,
+}: Readonly<{
+  items: Array<{ label: string; accent: FlowAccent; dashed?: boolean }>
+}>) {
+  return (
+    <div className="mt-4 flex flex-wrap gap-3 text-xs text-[var(--ink-soft)]">
+      {items.map((item) => (
+        <span key={item.label} className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] px-3 py-1.5">
+          <span
+            className="h-[2px] w-5"
+            style={{
+              background: item.dashed ? 'transparent' : accentMap[item.accent],
+              borderTop: item.dashed ? `2px dashed ${accentMap[item.accent]}` : undefined,
+            }}
+          />
+          {item.label}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function TimeSeriesSection({ snapshot }: Readonly<{ snapshot: DashboardSnapshot | null }>) {
+  const history = takeRecentHistory(snapshot, 24)
+
+  if (history.length < 2) {
+    return null
+  }
+
+  const hostPrimary = buildSeries(history, (point) => point.cpuPercent)
+  const hostSecondary = buildSeries(history, (point) => point.memoryPercent)
+  const requestPrimary = buildSeries(history, (point) => point.pendingRequests)
+  const requestSecondary = buildSeries(history, (point) => point.availableRequests)
+  const transferPrimary = buildSeries(history, (point) => point.downloadRateBytes)
+  const transferSecondary = buildSeries(history, (point) => point.uploadRateBytes)
+  const streamPrimary = buildSeries(history, (point) => point.activeStreams)
+  const streamSecondary = buildSeries(history, (point) => point.rootDiskPercent)
+  const latestPoint = history.at(-1)
+
+  if (!latestPoint) {
+    return null
+  }
+
+  return (
+    <section className="surface-panel rounded-[36px] p-6 md:p-8">
+      <SectionHeading
+        eyebrow="Telemetry"
+        title="The server has a pulse now."
+        description="These charts come from the rolling snapshot history the homelab is publishing, so the page can show how the box has been behaving instead of only what it looks like right this second."
+      />
+
+      <div className="mt-8 grid gap-5 xl:grid-cols-[1.3fr_0.7fr]">
+        <div className="surface-card rounded-[32px] p-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="retro-label mb-3" style={{ color: accentMap.blue }}>
+                Host load over time
+              </p>
+              <h3 className="text-3xl font-semibold tracking-tight text-[var(--ink-strong)]">
+                CPU {formatCompactNumber(latestPoint.cpuPercent, 'n/a')}% · RAM {formatCompactNumber(latestPoint.memoryPercent, 'n/a')}%
+              </h3>
+            </div>
+            <p className="max-w-xs text-sm leading-6 text-[var(--ink-soft)]">
+              A cleaner way to see whether the box is actually cruising or getting leaned on while the media stack is busy.
+            </p>
+          </div>
+          <div className="mt-6">
+            <HistoryChart primary={hostPrimary} secondary={hostSecondary} primaryAccent="blue" secondaryAccent="red" />
+            <HistoryLegend items={[{ label: 'CPU load', accent: 'blue' }, { label: 'Memory pressure', accent: 'red', dashed: true }]} />
+          </div>
+        </div>
+
+        <div className="grid gap-5">
+          <div className="surface-card rounded-[32px] p-6">
+            <p className="retro-label mb-3" style={{ color: accentMap.red }}>
+              Streams vs disk pressure
+            </p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">
+              {formatCompactNumber(latestPoint.activeStreams, '0')} active · {formatCompactNumber(latestPoint.rootDiskPercent, 'n/a')}% root used
+            </p>
+            <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">
+              This pairs the fun signal with the practical one so I can see whether activity lines up with the host starting to feel squeezed.
+            </p>
+            <div className="mt-5">
+              <HistoryChart primary={streamPrimary} secondary={streamSecondary} primaryAccent="red" secondaryAccent="yellow" height={156} />
+            </div>
+          </div>
+
+          <div className="surface-card rounded-[32px] p-6">
+            <p className="retro-label mb-3" style={{ color: accentMap.yellow }}>
+              Transfer rate
+            </p>
+            <p className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">
+              {formatBytesPerSecond(latestPoint.downloadRateBytes, 'n/a')} down · {formatBytesPerSecond(latestPoint.uploadRateBytes, 'n/a')} up
+            </p>
+            <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">
+              A quick look at whether the pipeline is just idling, actively pulling, or chewing through a busier download window.
+            </p>
+            <div className="mt-5">
+              <HistoryChart primary={transferPrimary} secondary={transferSecondary} primaryAccent="yellow" secondaryAccent="blue" height={156} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="surface-card rounded-[32px] p-6">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <p className="retro-label mb-3" style={{ color: accentMap.blue }}>
+                Request pressure
+              </p>
+              <p className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">
+                {formatCompactNumber(latestPoint.pendingRequests, '0')} pending · {formatCompactNumber(latestPoint.availableRequests, '0')} available
+              </p>
+            </div>
+            <span className="rounded-full border border-[var(--line)] px-3 py-1.5 text-xs uppercase tracking-[0.18em] text-[var(--ink-soft)]">
+              rolling history
+            </span>
+          </div>
+          <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">
+            This is a nicer way to tell whether requests are stacking up or flowing through the pipeline cleanly over time.
+          </p>
+          <div className="mt-5">
+            <HistoryChart primary={requestPrimary} secondary={requestSecondary} primaryAccent="blue" secondaryAccent="yellow" height={176} />
+            <HistoryLegend items={[{ label: 'Pending', accent: 'blue' }, { label: 'Available', accent: 'yellow', dashed: true }]} />
+          </div>
+        </div>
+
+        <div className="surface-card rounded-[32px] p-6">
+          <p className="retro-label mb-3" style={{ color: accentMap.red }}>
+            Readout
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              {
+                label: 'History points',
+                value: formatCompactNumber(history.length, '0'),
+                detail: 'Each point is one published snapshot from the server.',
+                accent: 'blue' as const,
+              },
+              {
+                label: 'Latest stream count',
+                value: formatCompactNumber(latestPoint.activeStreams, '0'),
+                detail: 'What Tautulli most recently saw as active.',
+                accent: 'red' as const,
+              },
+              {
+                label: 'Peak download sample',
+                value: formatBytesPerSecond(
+                  Math.max(...transferPrimary.map((point) => point.value ?? 0)),
+                  'n/a',
+                ),
+                detail: 'The highest sampled download rate in the current chart window.',
+                accent: 'yellow' as const,
+              },
+              {
+                label: 'Current root usage',
+                value: `${formatCompactNumber(latestPoint.rootDiskPercent, 'n/a')}%`,
+                detail: 'A quick host pressure check alongside the graphs.',
+                accent: 'blue' as const,
+              },
+            ].map((item) => (
+              <div key={item.label} className="rounded-[24px] border border-[var(--line)] bg-[var(--surface-0)] p-4">
+                <p className="retro-label mb-2" style={{ color: accentMap[item.accent] }}>
+                  {item.label}
+                </p>
+                <p className="text-xl font-semibold tracking-tight text-[var(--ink-strong)]">{item.value}</p>
+                <p className="mt-2 text-sm leading-6 text-[var(--ink-soft)]">{item.detail}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default async function Page() {
-  const { dashboard, source } = await getServerDashboardData()
+  const { dashboard, source, snapshot } = await getServerDashboardData()
   const activityWeekOccurrences = new Map<string, number>()
 
   return (
@@ -664,6 +1052,8 @@ export default async function Page() {
           </div>
         </div>
       </section>
+
+      <TimeSeriesSection snapshot={snapshot} />
 
       <section className="surface-panel rounded-[36px] p-6 md:p-8">
         <SectionHeading

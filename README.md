@@ -73,6 +73,29 @@ michelangelo-portfolio/
 
 This project is configured for deployment on Vercel. Simply push to your GitHub repository and connect it to Vercel for automatic deployments.
 
+## Server Dashboard Publishing
+
+The home server page can consume a sanitized snapshot that gets published from the homelab into Vercel.
+
+### Vercel Secrets
+
+- `BLOB_READ_WRITE_TOKEN` for Vercel Blob storage
+- `HOMELAB_DASHBOARD_PUBLISH_SECRET` as the shared HMAC secret used by the publisher job on the server
+
+### Optional Legacy Fallback
+
+If you still want the portfolio app to pull directly from a remote dashboard endpoint, these env vars are still supported:
+
+- `HOMELAB_DASHBOARD_URL`
+- `HOMELAB_DASHBOARD_TOKEN`
+
+### Publish Flow
+
+1. The server builds a small metrics snapshot.
+2. It signs the JSON body with `HOMELAB_DASHBOARD_PUBLISH_SECRET`.
+3. It POSTs that snapshot to `/api/server-dashboard/publish` on the Vercel deployment.
+4. The portfolio app reads the latest stored blob and maps it into the server page UI.
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

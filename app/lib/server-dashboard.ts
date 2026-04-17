@@ -1,4 +1,5 @@
 import { fallbackServerDashboard, type ServerDashboardData } from 'app/data/server'
+import { buildDashboardFromSnapshot, getStoredDashboardSnapshot, type DashboardSnapshot } from 'app/lib/server-dashboard-snapshot'
 
 const DASHBOARD_URL_ENV = 'HOMELAB_DASHBOARD_URL'
 const DASHBOARD_TOKEN_ENV = 'HOMELAB_DASHBOARD_TOKEN'
@@ -28,13 +29,25 @@ function isDashboardData(value: unknown): value is ServerDashboardData {
 export async function getServerDashboardData(): Promise<{
   dashboard: ServerDashboardData
   source: 'fallback' | 'live'
+  snapshot: DashboardSnapshot | null
 }> {
+  const storedSnapshot = await getStoredDashboardSnapshot()
+
+  if (storedSnapshot) {
+    return {
+      dashboard: buildDashboardFromSnapshot(storedSnapshot),
+      source: 'live',
+      snapshot: storedSnapshot,
+    }
+  }
+
   const endpoint = process.env[DASHBOARD_URL_ENV]
 
   if (!endpoint) {
     return {
       dashboard: fallbackServerDashboard,
       source: 'fallback',
+      snapshot: null,
     }
   }
 
@@ -58,11 +71,13 @@ export async function getServerDashboardData(): Promise<{
     return {
       dashboard: json,
       source: 'live',
+      snapshot: null,
     }
   } catch {
     return {
       dashboard: fallbackServerDashboard,
       source: 'fallback',
+      snapshot: null,
     }
   }
 }
