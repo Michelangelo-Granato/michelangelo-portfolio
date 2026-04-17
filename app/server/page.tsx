@@ -6,7 +6,7 @@ import { getServerDashboardData } from 'app/lib/server-dashboard'
 export const metadata: Metadata = {
   title: 'Home Server',
   description:
-    'A look at the media-first homelab behind Michelangelo Granato’s Jellyfin stack, including services, architecture, and telemetry plans.',
+    'A quick look at my home server setup, including the media pipeline, monitoring, and some fun stats.',
 }
 
 export const revalidate = 300
@@ -17,7 +17,11 @@ const accentMap = {
   yellow: 'var(--accent-yellow)',
 } as const
 
-function SectionHeading({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+function SectionHeading({
+  eyebrow,
+  title,
+  description,
+}: Readonly<{ eyebrow: string; title: string; description: string }>) {
   return (
     <div className="max-w-3xl">
       <p className="retro-label mb-2">{eyebrow}</p>
@@ -58,8 +62,325 @@ function activityColor(level: number) {
   }
 }
 
+type FlowAccent = keyof typeof accentMap
+
+type FlowNode = {
+  id: string
+  badge: string
+  title: string
+  subtitle: string
+  readout: string
+  accent: FlowAccent
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+type FlowConnection = {
+  id: string
+  d: string
+  accent: FlowAccent
+  dashed?: boolean
+  markerEnd?: string
+}
+
+const stackFlowNodes: readonly FlowNode[] = [
+  {
+    id: 'request',
+    badge: 'Trigger',
+    title: 'Request arrives',
+    subtitle: 'Requests UI / Overseerr',
+    readout: 'pending + approvals',
+    accent: 'blue',
+    x: 52,
+    y: 72,
+    width: 176,
+    height: 138,
+  },
+  {
+    id: 'indexers',
+    badge: 'Lookup',
+    title: 'Indexers fan out',
+    subtitle: 'Prowlarr / Flaresolverr',
+    readout: 'health + hit rate',
+    accent: 'red',
+    x: 252,
+    y: 72,
+    width: 176,
+    height: 138,
+  },
+  {
+    id: 'managers',
+    badge: 'Routing',
+    title: 'Managers decide',
+    subtitle: 'Radarr / Sonarr',
+    readout: 'queue + grabs',
+    accent: 'yellow',
+    x: 452,
+    y: 72,
+    width: 176,
+    height: 138,
+  },
+  {
+    id: 'downloads',
+    badge: 'Transfer',
+    title: 'Downloads land',
+    subtitle: 'qBittorrent / Unmanic',
+    readout: 'speed + cleanup',
+    accent: 'blue',
+    x: 652,
+    y: 72,
+    width: 176,
+    height: 138,
+  },
+  {
+    id: 'playback',
+    badge: 'Library',
+    title: 'Library goes live',
+    subtitle: 'Plex / Jellyfin / Tautulli',
+    readout: 'streams + watch time',
+    accent: 'red',
+    x: 852,
+    y: 72,
+    width: 176,
+    height: 138,
+  },
+  {
+    id: 'observability',
+    badge: 'Private lane',
+    title: 'Observability feeds the dashboard',
+    subtitle: 'Prometheus / Grafana / Dozzle / Tautulli',
+    readout: 'cpu + disk + uptime + playback',
+    accent: 'yellow',
+    x: 120,
+    y: 322,
+    width: 840,
+    height: 166,
+  },
+] as const
+
+const stackFlowConnections: readonly FlowConnection[] = [
+  {
+    id: 'request-indexers',
+    d: 'M228 141 C236 141 244 141 252 141',
+    accent: 'blue',
+    markerEnd: 'url(#flow-arrow-blue)',
+  },
+  {
+    id: 'indexers-managers',
+    d: 'M428 141 C436 141 444 141 452 141',
+    accent: 'red',
+    markerEnd: 'url(#flow-arrow-red)',
+  },
+  {
+    id: 'managers-downloads',
+    d: 'M628 141 C636 141 644 141 652 141',
+    accent: 'yellow',
+    markerEnd: 'url(#flow-arrow-yellow)',
+  },
+  {
+    id: 'downloads-playback',
+    d: 'M828 141 C836 141 844 141 852 141',
+    accent: 'blue',
+    markerEnd: 'url(#flow-arrow-blue)',
+  },
+  {
+    id: 'request-tap',
+    d: 'M140 210 V272',
+    accent: 'yellow',
+    dashed: true,
+  },
+  {
+    id: 'indexers-tap',
+    d: 'M340 210 V272',
+    accent: 'yellow',
+    dashed: true,
+  },
+  {
+    id: 'managers-tap',
+    d: 'M540 210 V272',
+    accent: 'yellow',
+    dashed: true,
+  },
+  {
+    id: 'downloads-tap',
+    d: 'M740 210 V272',
+    accent: 'yellow',
+    dashed: true,
+  },
+  {
+    id: 'playback-tap',
+    d: 'M940 210 V272',
+    accent: 'yellow',
+    dashed: true,
+  },
+  {
+    id: 'monitoring-bus',
+    d: 'M140 272 H940',
+    accent: 'yellow',
+    dashed: true,
+  },
+  {
+    id: 'dashboard-feed',
+    d: 'M540 272 V322',
+    accent: 'yellow',
+    markerEnd: 'url(#flow-arrow-yellow)',
+  },
+] as const
+
+function StackFlowNode({ node }: Readonly<{ node: FlowNode }>) {
+  const chipWidth = node.width > 320 ? 292 : node.width - 36
+  const chipX = (node.width - chipWidth) / 2
+
+  return (
+    <g transform={`translate(${node.x} ${node.y})`}>
+      <rect
+        width={node.width}
+        height={node.height}
+        rx="24"
+        style={{
+          fill: 'var(--surface-2)',
+          stroke: `color-mix(in srgb, ${accentMap[node.accent]} 42%, var(--line))`,
+          strokeWidth: 1.5,
+        }}
+      />
+      <rect
+        x="18"
+        y="18"
+        width="116"
+        height="24"
+        rx="999"
+        style={{
+          fill: `color-mix(in srgb, ${accentMap[node.accent]} 16%, transparent)`,
+          stroke: `color-mix(in srgb, ${accentMap[node.accent]} 40%, var(--line))`,
+          strokeWidth: 1,
+        }}
+      />
+      <text
+        x="76"
+        y="34"
+        textAnchor="middle"
+        style={{
+          fill: accentMap[node.accent],
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '0.16em',
+          textTransform: 'uppercase',
+        }}
+      >
+        {node.badge}
+      </text>
+      <text x="18" y="68" style={{ fill: 'var(--ink-strong)', fontSize: 19, fontWeight: 700, letterSpacing: '-0.03em' }}>
+        {node.title}
+      </text>
+      <text x="18" y="92" style={{ fill: 'var(--ink-soft)', fontSize: 12.5, fontWeight: 500 }}>
+        {node.subtitle}
+      </text>
+      <rect
+        x={chipX}
+        y={node.height - 38}
+        width={chipWidth}
+        height="22"
+        rx="999"
+        style={{
+          fill: `color-mix(in srgb, ${accentMap[node.accent]} 12%, transparent)`,
+          stroke: `color-mix(in srgb, ${accentMap[node.accent]} 34%, var(--line))`,
+          strokeWidth: 1,
+        }}
+      />
+      <text
+        x={node.width / 2}
+        y={node.height - 23}
+        textAnchor="middle"
+        style={{ fill: 'var(--ink)', fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', textTransform: 'uppercase' }}
+      >
+        {node.readout}
+      </text>
+    </g>
+  )
+}
+
+function StackFlowDiagram() {
+  return (
+    <div className="mt-8 overflow-x-auto pb-3">
+      <div
+        className="min-w-[1080px] rounded-[32px] border border-[var(--line)] p-3 md:p-4"
+        style={{
+          background:
+            'radial-gradient(circle at top left, color-mix(in srgb, var(--accent-blue) 12%, transparent), transparent 26%), radial-gradient(circle at 88% 18%, color-mix(in srgb, var(--accent-red) 10%, transparent), transparent 20%), linear-gradient(180deg, color-mix(in srgb, var(--surface-1) 92%, white), var(--surface-0))',
+        }}
+      >
+        <svg
+          viewBox="0 0 1080 520"
+          className="block h-auto w-full"
+          aria-labelledby="stack-flow-diagram-title"
+        >
+          <title id="stack-flow-diagram-title">
+            Diagram showing how a media request moves through the server stack into the library and how monitoring feeds the dashboard
+          </title>
+          <defs>
+            <marker id="flow-arrow-blue" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10Z" style={{ fill: accentMap.blue }} />
+            </marker>
+            <marker id="flow-arrow-red" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10Z" style={{ fill: accentMap.red }} />
+            </marker>
+            <marker id="flow-arrow-yellow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0 0L10 5L0 10Z" style={{ fill: accentMap.yellow }} />
+            </marker>
+          </defs>
+
+          <rect x="8" y="8" width="1064" height="504" rx="28" style={{ fill: 'transparent', stroke: 'var(--line)', strokeWidth: 1 }} />
+
+          <g style={{ opacity: 0.18 }}>
+            <path d="M24 258 H1056" style={{ stroke: 'var(--line)', strokeWidth: 1 }} />
+            <path d="M24 298 H1056" style={{ stroke: 'var(--line)', strokeWidth: 1 }} />
+            <path d="M240 24 V496" style={{ stroke: 'var(--line)', strokeWidth: 1 }} />
+            <path d="M440 24 V496" style={{ stroke: 'var(--line)', strokeWidth: 1 }} />
+            <path d="M640 24 V496" style={{ stroke: 'var(--line)', strokeWidth: 1 }} />
+            <path d="M840 24 V496" style={{ stroke: 'var(--line)', strokeWidth: 1 }} />
+          </g>
+
+          {stackFlowConnections.map((connection) => (
+            <path
+              key={connection.id}
+              d={connection.d}
+              markerEnd={connection.markerEnd}
+              style={{
+                fill: 'none',
+                stroke: accentMap[connection.accent],
+                strokeOpacity: connection.dashed ? 0.48 : 0.92,
+                strokeWidth: connection.dashed ? 2 : 2.5,
+                strokeDasharray: connection.dashed ? '8 10' : undefined,
+                strokeLinecap: 'round',
+                strokeLinejoin: 'round',
+              }}
+            />
+          ))}
+
+          <text
+            x="540"
+            y="260"
+            textAnchor="middle"
+            style={{ fill: 'var(--ink-soft)', fontSize: 11, fontWeight: 700, letterSpacing: '0.18em', textTransform: 'uppercase' }}
+          >
+            metrics tapped here before they hit the page
+          </text>
+
+          {stackFlowNodes.map((node) => (
+            <StackFlowNode key={node.id} node={node} />
+          ))}
+        </svg>
+      </div>
+      <p className="retro-label mt-3 md:hidden">Swipe to read the full diagram.</p>
+    </div>
+  )
+}
+
 export default async function Page() {
   const { dashboard, source } = await getServerDashboardData()
+  const activityWeekOccurrences = new Map<string, number>()
 
   return (
     <div className="space-y-10 md:space-y-14">
@@ -125,8 +446,8 @@ export default async function Page() {
             </p>
             <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">
               {source === 'live'
-                ? 'This page is currently rendering normalized data from a configured private endpoint.'
-                : 'The internal API route is ready for live telemetry. Until a private endpoint is configured, the UI stays useful with portfolio-safe fallback content.'}
+                ? 'These numbers are coming from a private endpoint wired into the server, so what you are seeing is a live snapshot.'
+                : 'The page is ready for live telemetry, but until that private endpoint is hooked up I use a hand-written snapshot so the page still tells the story.'}
             </p>
           </div>
 
@@ -163,8 +484,8 @@ export default async function Page() {
       <section className="space-y-5">
         <SectionHeading
           eyebrow="Highlights"
-          title="The quick operational readout."
-          description="A few high-signal metrics set the tone for the page before getting into service details, observability surfaces, and architecture."
+          title="The quick version."
+          description="If you only want the short tour, these are the numbers and details that give you the shape of the setup right away."
         />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {dashboard.highlights.map((item) => (
@@ -182,8 +503,8 @@ export default async function Page() {
       <section className="space-y-5">
         <SectionHeading
           eyebrow="Services"
-          title="Public apps, private automation, and secure ingress."
-          description="This board explains the stack in product terms instead of just container names, which makes it a better portfolio story."
+          title="What is actually running on it."
+          description="This is the real stack behind it: the media apps up front, the request and download chain in the middle, and the networking and monitoring pieces that keep it sane."
         />
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {dashboard.services.map((service) => (
@@ -233,8 +554,8 @@ export default async function Page() {
         <div className="space-y-5">
           <SectionHeading
             eyebrow="Media telemetry"
-            title="What I would surface from Jellyfin."
-            description="These cards map directly to the kinds of stats that make a media-first homelab feel alive on a portfolio page."
+            title="The fun media stats."
+            description="This is the kind of stuff I want from Plex, Jellyfin, and Tautulli because it makes the server feel less like a pile of containers and more like something people are genuinely using."
           />
           <div className="grid gap-4">
             {dashboard.media.map((item) => (
@@ -252,8 +573,8 @@ export default async function Page() {
         <div className="space-y-5">
           <SectionHeading
             eyebrow="System health"
-            title="The infrastructure side of the story."
-            description="The most convincing dashboards mix product-facing stats with the machine-level signals that keep the experience reliable."
+            title="The boring stats that matter."
+            description="The media side is the fun part, but these are the numbers that tell me whether Docker, the host, and the monitoring stack are all behaving themselves."
           />
           <div className="grid gap-4">
             {dashboard.systems.map((item) => (
@@ -273,8 +594,8 @@ export default async function Page() {
         <div className="surface-panel rounded-[36px] p-6 md:p-8">
           <SectionHeading
             eyebrow="Architecture"
-            title="A portfolio-friendly view of the stack."
-            description="Instead of dumping raw infrastructure details, this diagram frames the server as a system with clean boundaries: edge, public apps, automation, and storage."
+            title="How it is put together."
+            description="This is the simple version of the setup: Caddy and Tailscale handle access, the media apps and request UI sit up front, the *arr pipeline and download stack do the work, and the host keeps the data, metrics, and backups in order."
           />
           <div className="mt-8 grid gap-4 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr]">
             {dashboard.architecture.map((column, index) => (
@@ -300,22 +621,35 @@ export default async function Page() {
         <div className="surface-card rounded-[36px] p-6 md:p-8">
           <SectionHeading
             eyebrow="Activity"
-            title="A heatmap slot for playback or requests."
-            description="A GitHub-style activity graph is an easy win: it is compact, recognizable, and immediately gives the page some life."
+            title="A little activity pulse."
+            description="I like this view because it gives the page some energy at a glance, whether that activity is playback, requests, or background jobs doing their thing."
           />
           <div className="mt-8 flex gap-2 overflow-x-auto pb-1">
-            {dashboard.activity.map((week, weekIndex) => (
-              <div key={`week-${weekIndex}`} className="grid gap-2">
-                {week.map((level, dayIndex) => (
-                  <div
-                    key={`week-${weekIndex}-day-${dayIndex}`}
-                    className="h-4 w-4 rounded-[6px] border border-[rgba(18,18,18,0.08)]"
-                    style={{ backgroundColor: activityColor(level) }}
-                    aria-label={`Activity level ${level}`}
-                  />
-                ))}
-              </div>
-            ))}
+            {dashboard.activity.map((week) => {
+              const weekSignature = week.join('-')
+              const weekOccurrence = (activityWeekOccurrences.get(weekSignature) ?? 0) + 1
+              activityWeekOccurrences.set(weekSignature, weekOccurrence)
+
+              const levelOccurrences = new Map<number, number>()
+
+              return (
+                <div key={`${weekSignature}-${weekOccurrence}`} className="grid gap-2">
+                  {week.map((level) => {
+                    const levelOccurrence = (levelOccurrences.get(level) ?? 0) + 1
+                    levelOccurrences.set(level, levelOccurrence)
+
+                    return (
+                      <div
+                        key={`${weekSignature}-${weekOccurrence}-${level}-${levelOccurrence}`}
+                        className="h-4 w-4 rounded-[6px] border border-[rgba(18,18,18,0.08)]"
+                        style={{ backgroundColor: activityColor(level) }}
+                        aria-label={`Activity level ${level}`}
+                      />
+                    )
+                  })}
+                </div>
+              )
+            })}
           </div>
           <div className="mt-6 flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-[var(--ink-soft)]">
             <span>Low</span>
@@ -331,12 +665,21 @@ export default async function Page() {
         </div>
       </section>
 
+      <section className="surface-panel rounded-[36px] p-6 md:p-8">
+        <SectionHeading
+          eyebrow="Flow map"
+          title="One request, six moving parts."
+          description="The architecture grid shows the pieces. This is the diagram version that shows how a request actually travels through the stack before it becomes something you can watch."
+        />
+        <StackFlowDiagram />
+      </section>
+
       <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="space-y-5">
           <SectionHeading
             eyebrow="Requests"
-            title="A simple way to show the acquisition pipeline."
-            description="The request workflow is one of the strongest features to highlight because it connects public UX to private automation."
+            title="How requests turn into watchable stuff."
+            description="This is one of my favorite parts to show because a simple request kicks off a very real chain: approvals, indexers, downloads, imports, and then the item finally shows up in the library."
           />
           <div className="grid gap-4">
             {dashboard.requests.map((item) => (
@@ -354,8 +697,8 @@ export default async function Page() {
         <div className="space-y-5">
           <SectionHeading
             eyebrow="Containers"
-            title="Docker is part of the portfolio story too."
-            description="Showing the runtime footprint makes it clear that the site owner understands more than just the UI layer."
+            title="What is running under Docker."
+            description="I also wanted to show the runtime side of the setup, because the interesting bit is not just the UI. It is that the whole thing is actually running under Docker Compose, with scheduled services, logs, and maintenance tools behind it."
           />
           <div className="grid gap-4">
             {dashboard.containers.map((container) => (
@@ -389,8 +732,8 @@ export default async function Page() {
       <section className="surface-panel rounded-[36px] p-6 md:p-8">
         <SectionHeading
           eyebrow="Integration plan"
-          title="Built to graduate from a portfolio slice to a live dashboard."
-          description="The page already ships with a normalized internal API route. The next step is plugging that route into your private telemetry sources and letting the fallback snapshot take over when the server is unavailable."
+          title="Where I want to take this next."
+          description="Right now this page can fall back to a curated snapshot, but the next step is wiring in more live data from Tautulli, Jellyfin, Prometheus, qBittorrent, and the request stack so it feels like a real dashboard instead of just a static case study."
         />
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {dashboard.integrations.map((step, index) => {
