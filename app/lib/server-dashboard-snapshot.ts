@@ -1,6 +1,9 @@
-import { get } from '@vercel/blob'
+const METRICS_URL_ENV = 'HOMELAB_METRICS_URL'
+const METRICS_TOKEN_ENV = 'HOMELAB_METRICS_TOKEN'
 
-export const DASHBOARD_SNAPSHOT_BLOB_PATH = 'homelab/server-dashboard/latest.json'
+/** The homelab is on residential internet, so a slow or half-up server must
+ *  never hold a page render open. Past this we fall back. */
+const FETCH_TIMEOUT_MS = 6000
 
 type NullableNumber = number | null
 
@@ -247,17 +250,31 @@ export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot 
   )
 }
 
-export async function getStoredDashboardSnapshot(): Promise<DashboardSnapshot | null> {
-  try {
-    // Private store, so the read is authenticated with the store token rather
-    // than fetching a public URL. Page-level `revalidate` handles freshness.
-    const result = await get(DASHBOARD_SNAPSHOT_BLOB_PATH, { access: 'private' })
+/**
+ * Pulls the snapshot from the homelab's token-gated metrics endpoint. The
+ * response comes from a machine on the public internet, so it is validated
+ * exactly like any other untrusted input before it reaches the page.
+ */
+export async function fetchDashboardSnapshot(): Promise<DashboardSnapshot | null> {
+  const url = process.env[METRICS_URL_ENV]
+  const token = process.env[METRICS_TOKEN_ENV]
 
-    if (!result) {
+  if (!url || !token) {
+    return null
+  }
+
+  try {
+    const response = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      next: { revalidate: 60 },
+    })
+
+    if (!response.ok) {
       return null
     }
 
-    const json = (await new Response(result.stream).json()) as unknown
+    const json = (await response.json()) as unknown
     return isDashboardSnapshot(json) ? json : null
   } catch {
     return null

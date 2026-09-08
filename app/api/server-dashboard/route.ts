@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 import { getServerSnapshot } from 'app/lib/server-dashboard'
 import { buildMetricsView } from 'app/lib/server-metrics'
 
-export const revalidate = 300
+export const revalidate = 60
 
 /**
  * Serves the same measured numbers the page renders. Everything here comes

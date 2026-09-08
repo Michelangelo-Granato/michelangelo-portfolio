@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   description: 'Live status board for my home server: library size, host load, storage headroom, and service health.',
 }
 
-export const revalidate = 300
+export const revalidate = 60
 
 /** Meter fills carry severity, so a nearly-full disk reads as full before you
  *  get to the number. */
@@ -247,7 +247,7 @@ export default async function Page() {
             </div>
             <p className="mt-4 max-w-md text-sm leading-6 text-[var(--ink-soft)]">
               An Ubuntu box in my apartment running the media library, the request pipeline, and its own monitoring
-              stack. These numbers come off it every five minutes.
+              stack. It serves its own metrics, and this page reads them about once a minute.
             </p>
             <div className="mt-5 flex flex-wrap gap-2">
               <a
