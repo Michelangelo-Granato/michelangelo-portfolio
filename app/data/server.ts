@@ -61,6 +61,41 @@ export const fallbackLibraryMetrics = {
   seriesBytes: 4_038_645_034_201,
 }
 
+export const fallbackRequestMetrics = {
+  total: 222,
+  pending: 0,
+  approved: 119,
+  available: 79,
+}
+
+export const fallbackDownloadMetrics = {
+  queueCount: 37,
+  downloadingCount: 0,
+  seedingCount: 0,
+  downloadRateBytes: 0,
+  uploadRateBytes: 0,
+}
+
+export const fallbackSystemMetrics = {
+  uptimeHours: 17.7,
+  cpuPercent: 7.2,
+  memoryPercent: 33.2,
+  rootDiskPercent: 52,
+  mediaDiskFreeBytes: 2_076_208_758_784,
+}
+
+/** Display names and last-known state for the services the collector tracks. */
+export const fallbackServiceStatus: ReadonlyArray<{ key: string; name: string; up: boolean }> = [
+  { key: 'jellyfin', name: 'Jellyfin', up: true },
+  { key: 'seerr', name: 'Requests', up: true },
+  { key: 'radarr', name: 'Radarr', up: true },
+  { key: 'sonarr', name: 'Sonarr', up: true },
+  { key: 'prowlarr', name: 'Prowlarr', up: true },
+  { key: 'qbittorrent', name: 'qBittorrent', up: true },
+  { key: 'unmanic', name: 'Unmanic', up: false },
+  { key: 'prometheus', name: 'Prometheus', up: true },
+]
+
 export const fallbackInfrastructureMetrics = {
   cpuCores: 8,
   memoryTotalBytes: 16_705_286_144,

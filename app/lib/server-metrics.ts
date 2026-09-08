@@ -1,0 +1,117 @@
+import {
+  fallbackDownloadMetrics,
+  fallbackInfrastructureMetrics,
+  fallbackLibraryMetrics,
+  fallbackRequestMetrics,
+  fallbackServiceStatus,
+  fallbackSystemMetrics,
+} from 'app/data/server'
+import type { DashboardSnapshot } from 'app/lib/server-dashboard-snapshot'
+
+export type HistoryPoint = DashboardSnapshot['history'][number]
+
+export interface ServiceLamp {
+  key: string
+  name: string
+  up: boolean
+}
+
+export interface MetricsView {
+  live: boolean
+  generatedAt: string | null
+  services: ServiceLamp[]
+  servicesUp: number
+  library: typeof fallbackLibraryMetrics
+  infra: typeof fallbackInfrastructureMetrics
+  requests: typeof fallbackRequestMetrics
+  downloads: typeof fallbackDownloadMetrics
+  system: typeof fallbackSystemMetrics
+  history: HistoryPoint[]
+}
+
+/** A published value wins only when it is an actual number; null means the
+ *  collector could not reach that source, so the last known figure stands in. */
+function pick(value: number | null | undefined, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function mergeSection<T extends Record<string, number>>(
+  source: Partial<Record<keyof T, number | null>> | undefined,
+  fallback: T,
+): T {
+  const out = {} as T
+  for (const key of Object.keys(fallback) as Array<keyof T>) {
+    out[key] = pick(source?.[key], fallback[key]) as T[keyof T]
+  }
+  return out
+}
+
+function buildServices(snapshot: DashboardSnapshot | null): ServiceLamp[] {
+  if (!snapshot) {
+    return [...fallbackServiceStatus]
+  }
+
+  // Keep the curated order and display names; Plex is deliberately absent.
+  return fallbackServiceStatus.map((service) => {
+    const reported = (snapshot.services as Record<string, { healthy: boolean } | undefined>)[service.key]
+    return { ...service, up: reported ? reported.healthy : service.up }
+  })
+}
+
+export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsView {
+  const services = buildServices(snapshot)
+
+  return {
+    live: snapshot !== null,
+    generatedAt: snapshot?.generatedAt ?? null,
+    services,
+    servicesUp: services.filter((service) => service.up).length,
+    library: mergeSection(snapshot?.library, fallbackLibraryMetrics),
+    infra: mergeSection(snapshot?.infrastructure, fallbackInfrastructureMetrics),
+    requests: mergeSection(snapshot?.requests, fallbackRequestMetrics),
+    downloads: mergeSection(snapshot?.downloads, fallbackDownloadMetrics),
+    system: mergeSection(snapshot?.system, fallbackSystemMetrics),
+    history: snapshot?.history ?? [],
+  }
+}
+
+export function formatCount(value: number) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
+}
+
+export function formatTB(value: number, digits = 2) {
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(value / 1e12)} TB`
+}
+
+export function formatGiB(value: number) {
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value / 1024 ** 3)} GB`
+}
+
+export function formatRate(value: number) {
+  const units = ['B/s', 'KB/s', 'MB/s', 'GB/s']
+  let size = value
+  let unit = 0
+  while (size >= 1024 && unit < units.length - 1) {
+    size /= 1024
+    unit += 1
+  }
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: unit === 0 ? 0 : 1 }).format(size)} ${units[unit]}`
+}
+
+export function formatUptime(hours: number) {
+  if (hours < 48) {
+    return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 }).format(hours)}h`
+  }
+  return `${Math.floor(hours / 24)}d`
+}
+
+export function formatClock(timestamp: string | null) {
+  if (!timestamp) {
+    return null
+  }
+  const date = new Date(timestamp)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+  return new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeStyle: 'short' }).format(date)
+}

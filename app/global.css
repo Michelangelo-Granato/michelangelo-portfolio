@@ -20,6 +20,19 @@
   --accent-red: #c63b32;
   --accent-blue: #2d5e9d;
   --accent-yellow: #d8a62b;
+
+  /* Chart series. Validated for CVD separation, chroma and lightness against
+     the panel surface; see the dashboard palette check. Yellow sits below 3:1
+     on light, so anything drawn in it also carries a visible label. */
+  --series-cpu: #2d5e9d;
+  --series-ram: #c63b32;
+  --series-third: #d8a62b;
+  --status-up: #1d7a68;
+  --status-down: #c63b32;
+  --chart-grid: rgba(18, 18, 18, 0.1);
+  --chart-track: rgba(18, 18, 18, 0.08);
+  --chart-surface: #fbfbf6;
+
   --sh-class: #2d5e9d;
   --sh-identifier: #31353c;
   --sh-sign: #7a8187;
@@ -70,6 +83,17 @@ html.dark {
   --accent-red: #ff8b8b;
   --accent-blue: #7ab0ff;
   --accent-yellow: #f0c95a;
+
+  /* Dark is re-stepped, not flipped: the light accents sit above the lightness
+     band on a dark surface, so series get their own darker steps that pass. */
+  --series-cpu: #5590e0;
+  --series-ram: #e8635c;
+  --series-third: #b8892a;
+  --status-up: #4fbfa4;
+  --status-down: #e8635c;
+  --chart-grid: rgba(255, 255, 255, 0.1);
+  --chart-track: rgba(255, 255, 255, 0.08);
+  --chart-surface: #0a0a0c;
 }
 
 @media (prefers-reduced-motion: no-preference) {
