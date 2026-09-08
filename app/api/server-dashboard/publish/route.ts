@@ -64,6 +64,9 @@ export async function POST(request: Request) {
   const blob = await put(DASHBOARD_SNAPSHOT_BLOB_PATH, body, {
     access: 'private',
     addRandomSuffix: false,
+    // The publisher rewrites this same path on every run, so overwriting is
+    // the intended behaviour rather than an accident.
+    allowOverwrite: true,
     contentType: 'application/json',
     cacheControlMaxAge: 60,
   })
