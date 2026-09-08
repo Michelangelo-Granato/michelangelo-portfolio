@@ -150,6 +150,17 @@ function DriveBar({ drive }: Readonly<{ drive: Drive }>) {
   )
 }
 
+function MetricRow({ label, value }: Readonly<{ label: string; value: string }>) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-[var(--line)] py-2 last:border-b-0">
+      <span className="text-sm text-[var(--ink-soft)]">{label}</span>
+      <span className="text-sm font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+        {value}
+      </span>
+    </div>
+  )
+}
+
 function Lamp({ name, up }: Readonly<{ name: string; up: boolean }>) {
   return (
     <div className="flex items-center gap-2.5 rounded-lg border border-[var(--line)] px-3 py-2">
@@ -207,7 +218,7 @@ function tracePoints(view: MetricsView, map: (point: MetricsView['history'][numb
 export default async function Page() {
   const { snapshot } = await getServerSnapshot()
   const view = buildMetricsView(snapshot)
-  const { library, infra, requests, downloads, system, services, drives } = view
+  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded } = view
 
   const libraryBytes = library.movieBytes + library.seriesBytes
   const mediaUsed = infra.mediaTotalBytes - infra.mediaFreeBytes
@@ -405,6 +416,57 @@ export default async function Page() {
             height={186}
             idleLabel="Idle. Nothing has moved through the download client in this window."
           />
+        </Panel>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.55fr]">
+        <Panel>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Playing now</h2>
+            <span className="text-xs text-[var(--ink-soft)]">via Jellyfin</span>
+          </div>
+          <div className="text-5xl font-semibold leading-none tracking-tight text-[var(--ink-strong)]">
+            {formatCount(media.activeStreams)}
+          </div>
+          <p className="mt-2 text-sm text-[var(--ink-soft)]">
+            {media.activeStreams === 1 ? 'active stream' : 'active streams'}
+          </p>
+          <div className="mt-5">
+            <MetricRow label="Direct play" value={formatCount(media.directPlays)} />
+            <MetricRow label="Transcoding" value={formatCount(media.transcodes)} />
+            <MetricRow
+              label="Playable in Jellyfin"
+              value={`${formatCount(media.movies)} films · ${formatCount(media.series)} shows`}
+            />
+          </div>
+          <p className="mt-4 text-[11px] leading-5 text-[var(--ink-soft)]">
+            Jellyfin counts what is on disk and playable. The library numbers above count everything Radarr and Sonarr
+            track, including what has not arrived yet.
+          </p>
+        </Panel>
+
+        <Panel>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Recently added</h2>
+            <span className="text-xs text-[var(--ink-soft)]">newest first</span>
+          </div>
+          {recentlyAdded.length === 0 ? (
+            <p className="text-sm text-[var(--ink-soft)]">Nothing new since the last snapshot.</p>
+          ) : (
+            <ol className="space-y-2">
+              {recentlyAdded.map((title, index) => (
+                <li
+                  key={title}
+                  className="flex items-baseline gap-3 border-b border-[var(--line)] pb-2 last:border-b-0 last:pb-0"
+                >
+                  <span className="text-[11px] tabular-nums text-[var(--ink-soft)]">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <span className="min-w-0 flex-1 text-sm text-[var(--ink)]">{title}</span>
+                </li>
+              ))}
+            </ol>
+          )}
         </Panel>
       </div>
 

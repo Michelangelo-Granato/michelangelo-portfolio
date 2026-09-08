@@ -1,6 +1,8 @@
 import {
   fallbackDownloadMetrics,
   fallbackDrives,
+  fallbackMediaMetrics,
+  fallbackRecentlyAdded,
   fallbackInfrastructureMetrics,
   fallbackLibraryMetrics,
   fallbackRequestMetrics,
@@ -34,8 +36,17 @@ export interface MetricsView {
   requests: typeof fallbackRequestMetrics
   downloads: typeof fallbackDownloadMetrics
   system: typeof fallbackSystemMetrics
+  media: typeof fallbackMediaMetrics
+  recentlyAdded: string[]
   drives: Drive[]
   history: HistoryPoint[]
+}
+
+/** Jellyfin can list the same title once per library it appears in. */
+function dedupe(names: string[]) {
+  return names
+    .map((name) => name.trim())
+    .filter((name, index, all) => name.length > 0 && all.indexOf(name) === index)
 }
 
 /** `/media/media_main` reads better as `media_main`. */
@@ -102,6 +113,8 @@ export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsVie
     requests: mergeSection(snapshot?.requests, fallbackRequestMetrics),
     downloads: mergeSection(snapshot?.downloads, fallbackDownloadMetrics),
     system: mergeSection(snapshot?.system, fallbackSystemMetrics),
+    media: mergeSection(snapshot?.media, fallbackMediaMetrics),
+    recentlyAdded: dedupe(snapshot?.media?.recentlyAdded ?? [...fallbackRecentlyAdded]),
     drives: buildDrives(snapshot),
     history: snapshot?.history ?? [],
   }

@@ -33,6 +33,19 @@ export const fallbackInfrastructureMetrics = {
   healthIssues: 2,
 }
 
+/** Jellyfin's own view of the library: what is actually present and playable,
+ *  as opposed to what Radarr and Sonarr are tracking. */
+export const fallbackMediaMetrics = {
+  movies: 134,
+  series: 92,
+  episodes: 3710,
+  activeStreams: 0,
+  directPlays: 0,
+  transcodes: 0,
+}
+
+export const fallbackRecentlyAdded: ReadonlyArray<string> = []
+
 export const fallbackRequestMetrics = {
   total: 222,
   pending: 0,
