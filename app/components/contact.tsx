@@ -1,6 +1,8 @@
 'use client';
 import { useState } from 'react';
 
+const CONTACT_EMAIL = 'michelangelo.granato.1@gmail.com';
+
 const LinkedInIcon = () => (
   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7 fill-current">
     <path d="M4.98 3.5a2.49 2.49 0 1 1 0 4.98 2.49 2.49 0 0 1 0-4.98ZM3 9h4v12H3zM9 9h3.83v1.64h.05c.53-1.01 1.84-2.08 3.78-2.08 4.04 0 4.79 2.66 4.79 6.12V21h-4v-5.58c0-1.33-.02-3.04-1.85-3.04-1.86 0-2.14 1.45-2.14 2.95V21H9z" />
@@ -36,7 +38,7 @@ const socialLinks = [
   {
     name: 'Email',
     label: 'Shoot me a message',
-    href: 'mailto:michelangelo.granato.1@gmail.com',
+    href: `mailto:${CONTACT_EMAIL}`,
     Icon: MailIcon,
   },
 ];
@@ -44,8 +46,8 @@ const socialLinks = [
 const contactDetails = [
   {
     label: 'Email',
-    value: 'michelangelo.granato.1@gmail.com',
-    href: 'mailto:michelangelo.granato.1@gmail.com',
+    value: CONTACT_EMAIL,
+    href: `mailto:${CONTACT_EMAIL}`,
   },
   {
     label: 'Phone',
@@ -66,19 +68,36 @@ const Contact: React.FC = () => {
     message: ''
   });
 
+  const [handoff, setHandoff] = useState<{ subject: string; body: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const subjectLine = formData.subject.trim() || `Portfolio inquiry from ${formData.name}`;
-    const subject = encodeURIComponent(subjectLine);
-    const body = encodeURIComponent([
+    const bodyText = [
       `Name: ${formData.name}`,
       `Email: ${formData.email}`,
       `Subject: ${subjectLine}`,
       '',
       formData.message,
-    ].join('\n'));
+    ].join('\n');
 
-    globalThis.location.href = `mailto:michelangelo.granato.1@gmail.com?subject=${subject}&body=${body}`;
+    globalThis.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(bodyText)}`;
+
+    // A mailto: does nothing at all when no mail client is registered, which is
+    // common on webmail. Always surface the message so it is never just lost.
+    setHandoff({ subject: subjectLine, body: bodyText });
+    setCopied(false);
+  };
+
+  const copyMessage = async () => {
+    if (!handoff) return;
+    try {
+      await navigator.clipboard.writeText(`To: ${CONTACT_EMAIL}\nSubject: ${handoff.subject}\n\n${handoff.body}`);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -177,6 +196,28 @@ const Contact: React.FC = () => {
               <p className="mt-3 text-xs leading-6 text-[#e6d9c8]/54">
                 The form opens your default email client with the message prefilled.
               </p>
+
+              {handoff && (
+                <div
+                  role="status"
+                  className="mt-4 rounded-[18px] border border-[#f1e5d4]/16 bg-[#221b16]/70 p-4"
+                >
+                  <p className="text-sm leading-6 text-[#f3e8d8]">
+                    Your email client should have opened. If nothing happened, copy the message and send it to{' '}
+                    <a href={`mailto:${CONTACT_EMAIL}`} className="underline underline-offset-2">
+                      {CONTACT_EMAIL}
+                    </a>
+                    .
+                  </p>
+                  <button
+                    type="button"
+                    onClick={copyMessage}
+                    className="mt-3 rounded-[14px] border border-[#f1e5d4]/24 px-3.5 py-2 text-xs font-medium text-[#f3e8d8] transition-colors hover:bg-[#f1e5d4]/10"
+                  >
+                    {copied ? 'Copied' : 'Copy message'}
+                  </button>
+                </div>
+              )}
             </div>
           </form>
         </div>

@@ -1,4 +1,6 @@
 
+import Image from 'next/image';
+
 import { projects } from '../data/projects';
 
 export default function Page() {
@@ -25,12 +27,13 @@ export default function Page() {
                             {siteUrl ? (
                                 <a href={siteUrl} target="_blank" rel="noopener noreferrer" className="block h-full w-full">
                                     {project.snapshotImage ? (
-                                        <div className="h-full w-full overflow-hidden rounded-[22px] border border-dashed border-[var(--line)]">
-                                            <img
+                                        <div className="relative h-full w-full overflow-hidden rounded-[22px] border border-dashed border-[var(--line)]">
+                                            <Image
                                                 src={project.snapshotImage}
                                                 alt={`${project.title} snapshot`}
-                                                className="object-cover w-full h-full"
-                                                loading="lazy"
+                                                fill
+                                                sizes="(max-width: 1024px) 100vw, 45vw"
+                                                className="object-cover"
                                             />
                                         </div>
                                     ) : (
@@ -41,12 +44,13 @@ export default function Page() {
                                 </a>
                             ) : (
                                 project.snapshotImage ? (
-                                    <div className="h-full w-full overflow-hidden rounded-[22px] border border-dashed border-[var(--line)]">
-                                        <img
+                                    <div className="relative h-full w-full overflow-hidden rounded-[22px] border border-dashed border-[var(--line)]">
+                                        <Image
                                             src={project.snapshotImage}
                                             alt={`${project.title} snapshot`}
-                                            className="object-cover w-full h-full"
-                                            loading="lazy"
+                                            fill
+                                            sizes="(max-width: 1024px) 100vw, 45vw"
+                                            className="object-cover"
                                         />
                                     </div>
                                 ) : (

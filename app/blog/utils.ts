@@ -27,6 +27,13 @@ function parseFrontmatter(fileContent: string) {
 }
 
 function getMDXFiles(dir) {
+  // Git does not track empty directories, so a checkout with no posts has no
+  // posts folder at all. Treat that as "nothing published" rather than failing
+  // the build.
+  if (!fs.existsSync(dir)) {
+    return []
+  }
+
   return fs.readdirSync(dir).filter((file) => path.extname(file) === '.mdx')
 }
 

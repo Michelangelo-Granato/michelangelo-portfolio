@@ -9,6 +9,25 @@ export function BlogPosts() {
     return 1
   })
 
+  if (allBlogs.length === 0) {
+    return (
+      <div className="surface-card rounded-[26px] p-6">
+        <p className="text-[var(--ink)]">Nothing published yet.</p>
+        <p className="mt-2 text-sm leading-6 text-[var(--ink-soft)]">
+          I am writing up the homelab telemetry pipeline first. Until then, the{' '}
+          <Link href="/server" className="underline underline-offset-2">
+            server dashboard
+          </Link>{' '}
+          and{' '}
+          <Link href="/projects" className="underline underline-offset-2">
+            projects
+          </Link>{' '}
+          pages are the best look at what I have been building.
+        </p>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-4">
       {allBlogs
