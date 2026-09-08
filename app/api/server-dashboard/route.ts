@@ -1,14 +1,29 @@
 import { NextResponse } from 'next/server'
 
-import { getServerDashboardData } from 'app/lib/server-dashboard'
+import { getServerSnapshot } from 'app/lib/server-dashboard'
+import { buildMetricsView } from 'app/lib/server-metrics'
 
 export const revalidate = 300
 
+/**
+ * Serves the same measured numbers the page renders. Everything here comes
+ * from the homelab's exporters; there is no hand-written content in the
+ * response.
+ */
 export async function GET() {
-  const { dashboard, source } = await getServerDashboardData()
+  const { snapshot, live } = await getServerSnapshot()
+  const view = buildMetricsView(snapshot)
 
   return NextResponse.json({
-    source,
-    dashboard,
+    source: live ? 'live' : 'fallback',
+    generatedAt: view.generatedAt,
+    services: view.services,
+    library: view.library,
+    infrastructure: view.infra,
+    requests: view.requests,
+    downloads: view.downloads,
+    system: view.system,
+    drives: view.drives,
+    history: view.history,
   })
 }

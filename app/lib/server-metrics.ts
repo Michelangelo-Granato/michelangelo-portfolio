@@ -1,5 +1,6 @@
 import {
   fallbackDownloadMetrics,
+  fallbackDrives,
   fallbackInfrastructureMetrics,
   fallbackLibraryMetrics,
   fallbackRequestMetrics,
@@ -16,6 +17,13 @@ export interface ServiceLamp {
   up: boolean
 }
 
+export interface Drive {
+  mount: string
+  label: string
+  totalBytes: number
+  freeBytes: number
+}
+
 export interface MetricsView {
   live: boolean
   generatedAt: string | null
@@ -26,7 +34,30 @@ export interface MetricsView {
   requests: typeof fallbackRequestMetrics
   downloads: typeof fallbackDownloadMetrics
   system: typeof fallbackSystemMetrics
+  drives: Drive[]
   history: HistoryPoint[]
+}
+
+/** `/media/media_main` reads better as `media_main`. */
+function driveLabel(mount: string) {
+  const tail = mount.split('/').filter(Boolean).pop()
+  return tail ?? mount
+}
+
+function buildDrives(snapshot: DashboardSnapshot | null): Drive[] {
+  const source =
+    snapshot?.drives && snapshot.drives.length > 0
+      ? snapshot.drives.filter(
+          (drive): drive is { mount: string; totalBytes: number; freeBytes: number } =>
+            typeof drive.totalBytes === 'number' && typeof drive.freeBytes === 'number' && drive.totalBytes > 0,
+        )
+      : null
+
+  const drives = source && source.length > 0 ? source : fallbackDrives
+
+  return [...drives]
+    .map((drive) => ({ ...drive, label: driveLabel(drive.mount) }))
+    .sort((a, b) => b.totalBytes - a.totalBytes)
 }
 
 /** A published value wins only when it is an actual number; null means the
@@ -71,6 +102,7 @@ export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsVie
     requests: mergeSection(snapshot?.requests, fallbackRequestMetrics),
     downloads: mergeSection(snapshot?.downloads, fallbackDownloadMetrics),
     system: mergeSection(snapshot?.system, fallbackSystemMetrics),
+    drives: buildDrives(snapshot),
     history: snapshot?.history ?? [],
   }
 }

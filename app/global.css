@@ -31,6 +31,9 @@
   --status-down: #c63b32;
   --chart-grid: rgba(18, 18, 18, 0.1);
   --chart-track: rgba(18, 18, 18, 0.08);
+  /* De-emphasis fill for a segment that still carries meaning, so it stays
+     visible where the empty track would disappear. */
+  --series-muted: rgba(18, 18, 18, 0.3);
   --chart-surface: #fbfbf6;
 
   --sh-class: #2d5e9d;
@@ -93,6 +96,7 @@ html.dark {
   --status-down: #e8635c;
   --chart-grid: rgba(255, 255, 255, 0.1);
   --chart-track: rgba(255, 255, 255, 0.08);
+  --series-muted: rgba(255, 255, 255, 0.32);
   --chart-surface: #0a0a0c;
 }
 
