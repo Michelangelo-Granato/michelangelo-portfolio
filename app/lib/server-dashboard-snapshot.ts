@@ -433,11 +433,20 @@ function buildSnapshotMedia(snapshot: DashboardSnapshot) {
     snapshot.media.recentlyAdded.length > 0
       ? snapshot.media.recentlyAdded.slice(0, 2).join(' · ')
       : fallbackServerDashboard.media[1].value
-  const libraryValue = hasAnyNumber(snapshot.media.movies, snapshot.media.series)
-    ? `${formatCount(snapshot.media.movies, '?')} movies · ${formatCount(snapshot.media.series, '?')} shows`
+  // Jellyfin is the richer source, but it needs an API key. When that is
+  // missing the Radarr and Sonarr exporters still know how big the library is,
+  // so fall back to those before falling back to curated copy.
+  const movies = snapshot.media.movies ?? snapshot.library?.movies ?? null
+  const series = snapshot.media.series ?? snapshot.library?.series ?? null
+  const episodes = snapshot.media.episodes ?? snapshot.library?.episodes ?? null
+
+  const libraryValue = hasAnyNumber(movies, series)
+    ? `${formatCount(movies, '?')} movies · ${formatCount(series, '?')} shows`
     : fallbackServerDashboard.media[0].value
-  const libraryDescription = hasNumber(snapshot.media.episodes)
-    ? `The live snapshot is currently seeing ${formatCount(snapshot.media.episodes, '?')} episodes and ${formatCount(snapshot.media.songs, '?')} songs across the library.`
+  const libraryDescription = hasNumber(episodes)
+    ? hasNumber(snapshot.media.songs)
+      ? `The live snapshot is currently seeing ${formatCount(episodes, '?')} episodes and ${formatCount(snapshot.media.songs, '?')} songs across the library.`
+      : `The live snapshot is currently tracking ${formatCount(episodes, '?')} episodes across ${formatCount(series, '?')} series.`
     : fallbackServerDashboard.media[0].description
   const playbackValue = hasAnyNumber(snapshot.media.activeStreams, snapshot.media.watchTimeHours7d)
     ? `${formatCount(snapshot.media.activeStreams, '0')} active · ${formatHours(snapshot.media.watchTimeHours7d, 'n/a')} / 7d`
