@@ -41,6 +41,40 @@ export interface IntegrationStep {
   description: string
 }
 
+/**
+ * Real numbers pulled off the box's Prometheus exporters on 2026-09-07. These
+ * back the live-metrics section whenever the publisher has not pushed a fresh
+ * snapshot, so the page shows the actual shape of the server rather than
+ * placeholder copy.
+ */
+export const fallbackLibraryMetrics = {
+  movies: 142,
+  moviesDownloaded: 124,
+  moviesMissing: 12,
+  moviesWanted: 4,
+  movieBytes: 1_383_820_666_582,
+  series: 94,
+  seasons: 391,
+  episodes: 7115,
+  episodesDownloaded: 3703,
+  episodesMissing: 534,
+  seriesBytes: 4_038_645_034_201,
+}
+
+export const fallbackInfrastructureMetrics = {
+  cpuCores: 8,
+  memoryTotalBytes: 16_705_286_144,
+  load1: 0.64,
+  containersRunning: 46,
+  mediaTotalBytes: 13_948_649_287_680,
+  mediaFreeBytes: 2_364_605_386_752,
+  probesUp: 5,
+  probesTotal: 7,
+  indexersEnabled: 15,
+  indexerResponseMs: 191,
+  healthIssues: 2,
+}
+
 export interface ServerDashboardData {
   updatedAt: string
   intro: {
@@ -77,8 +111,8 @@ export const fallbackServerDashboard: ServerDashboardData = {
       accent: 'red',
     },
     {
-      label: 'Main profile',
-      value: '20+',
+      label: 'Containers running',
+      value: '46',
       detail: 'The full profile covers media, downloads, monitoring, backups, DNS, and home automation instead of just a couple of containers.',
       accent: 'blue',
     },
@@ -158,8 +192,9 @@ export const fallbackServerDashboard: ServerDashboardData = {
   media: [
     {
       title: 'Library overview',
-      value: 'Plex + Jellyfin libraries',
-      description: 'The obvious first card: total movies, total shows, fresh additions, and how the combined library is changing over time.',
+      value: '142 movies · 94 shows',
+      description:
+        'Radarr and Sonarr currently track 142 movies and 94 series across 391 seasons and 7,115 episodes, adding up to roughly 5.4 TB of media.',
       accent: 'red',
     },
     {
@@ -190,8 +225,9 @@ export const fallbackServerDashboard: ServerDashboardData = {
     },
     {
       title: 'Storage layout',
-      value: 'data/ · media/ · backups',
-      description: 'How the server splits config data, the actual media library, and backup storage, plus how much room is left before I need to think about cleanup.',
+      value: '13.9 TB pool · 2.4 TB free',
+      description:
+        'Two media drives make up the pool that holds the library, with config data on the root disk and roughly 17% of the media pool still free.',
       accent: 'yellow',
     },
     {
@@ -286,7 +322,8 @@ export const fallbackServerDashboard: ServerDashboardData = {
     },
     {
       title: 'Infra metrics',
-      description: 'Use Prometheus-fed host and container metrics for CPU, memory, disk, uptime, latency, and basic health without hand-rolling each number.',
+      description:
+        'Done: the Radarr, Sonarr, and Prowlarr exporters plus node-exporter and blackbox already feed library totals, storage headroom, and probe health straight into this page.',
     },
     {
       title: 'Safe fallback story',

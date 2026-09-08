@@ -1,10 +1,66 @@
-import { head } from '@vercel/blob'
+import { get } from '@vercel/blob'
 
 import { fallbackServerDashboard, type ServerDashboardData } from 'app/data/server'
 
 export const DASHBOARD_SNAPSHOT_BLOB_PATH = 'homelab/server-dashboard/latest.json'
 
 type NullableNumber = number | null
+
+export interface LibrarySnapshot {
+  movies: NullableNumber
+  moviesDownloaded: NullableNumber
+  moviesMissing: NullableNumber
+  moviesWanted: NullableNumber
+  movieBytes: NullableNumber
+  series: NullableNumber
+  seasons: NullableNumber
+  episodes: NullableNumber
+  episodesDownloaded: NullableNumber
+  episodesMissing: NullableNumber
+  seriesBytes: NullableNumber
+}
+
+export interface InfrastructureSnapshot {
+  cpuCores: NullableNumber
+  memoryTotalBytes: NullableNumber
+  load1: NullableNumber
+  containersRunning: NullableNumber
+  mediaTotalBytes: NullableNumber
+  mediaFreeBytes: NullableNumber
+  probesUp: NullableNumber
+  probesTotal: NullableNumber
+  indexersEnabled: NullableNumber
+  indexerResponseMs: NullableNumber
+  healthIssues: NullableNumber
+}
+
+const LIBRARY_KEYS: ReadonlyArray<keyof LibrarySnapshot> = [
+  'movies',
+  'moviesDownloaded',
+  'moviesMissing',
+  'moviesWanted',
+  'movieBytes',
+  'series',
+  'seasons',
+  'episodes',
+  'episodesDownloaded',
+  'episodesMissing',
+  'seriesBytes',
+]
+
+const INFRASTRUCTURE_KEYS: ReadonlyArray<keyof InfrastructureSnapshot> = [
+  'cpuCores',
+  'memoryTotalBytes',
+  'load1',
+  'containersRunning',
+  'mediaTotalBytes',
+  'mediaFreeBytes',
+  'probesUp',
+  'probesTotal',
+  'indexersEnabled',
+  'indexerResponseMs',
+  'healthIssues',
+]
 
 export interface DashboardSnapshot {
   generatedAt: string
@@ -50,6 +106,17 @@ export interface DashboardSnapshot {
     rootDiskPercent: NullableNumber
     mediaDiskFreeBytes: NullableNumber
   }
+  /**
+   * Library totals scraped straight from the Radarr and Sonarr Prometheus
+   * exporters. Optional so snapshots published before these were collected
+   * still validate.
+   */
+  library?: LibrarySnapshot
+  /**
+   * Host and monitoring-stack facts from node-exporter, cAdvisor, blackbox,
+   * and the Prowlarr exporter. Optional for the same reason as `library`.
+   */
+  infrastructure?: InfrastructureSnapshot
   history: Array<{
     timestamp: string
     cpuPercent: NullableNumber
@@ -107,6 +174,23 @@ function isHistoryPoint(
   )
 }
 
+/**
+ * Optional metric sections validate when absent, or when present with every
+ * key set to a number or an explicit null.
+ */
+function isOptionalMetricSection<T>(value: unknown, keys: ReadonlyArray<keyof T>): value is T | undefined {
+  if (value === undefined) {
+    return true
+  }
+
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+
+  const section = value as Record<string, unknown>
+  return keys.every((key) => isNullableNumber(section[key as string]))
+}
+
 export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
   if (!value || typeof value !== 'object') {
     return false
@@ -148,6 +232,8 @@ export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot 
     isNullableNumber(snapshot.system?.memoryPercent) &&
     isNullableNumber(snapshot.system?.rootDiskPercent) &&
     isNullableNumber(snapshot.system?.mediaDiskFreeBytes) &&
+    isOptionalMetricSection<LibrarySnapshot>(snapshot.library, LIBRARY_KEYS) &&
+    isOptionalMetricSection<InfrastructureSnapshot>(snapshot.infrastructure, INFRASTRUCTURE_KEYS) &&
     Array.isArray(snapshot.history) &&
     snapshot.history.every((point) => isHistoryPoint(point))
   )
@@ -552,16 +638,15 @@ export function buildDashboardFromSnapshot(snapshot: DashboardSnapshot): ServerD
 
 export async function getStoredDashboardSnapshot(): Promise<DashboardSnapshot | null> {
   try {
-    const blob = await head(DASHBOARD_SNAPSHOT_BLOB_PATH)
-    const response = await fetch(blob.url, {
-      next: { revalidate: 300 },
-    })
+    // Private store, so the read is authenticated with the store token rather
+    // than fetching a public URL. Page-level `revalidate` handles freshness.
+    const result = await get(DASHBOARD_SNAPSHOT_BLOB_PATH, { access: 'private' })
 
-    if (!response.ok) {
+    if (!result) {
       return null
     }
 
-    const json = (await response.json()) as unknown
+    const json = (await new Response(result.stream).json()) as unknown
     return isDashboardSnapshot(json) ? json : null
   } catch {
     return null

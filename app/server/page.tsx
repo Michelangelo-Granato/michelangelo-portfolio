@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { fallbackInfrastructureMetrics, fallbackLibraryMetrics } from 'app/data/server'
 import { getServerDashboardData } from 'app/lib/server-dashboard'
 import type { DashboardSnapshot } from 'app/lib/server-dashboard-snapshot'
 
@@ -766,6 +767,206 @@ function TimeSeriesSection({ snapshot }: Readonly<{ snapshot: DashboardSnapshot 
   )
 }
 
+function formatTerabytes(value: number | null, fallback: string) {
+  if (value === null || !Number.isFinite(value)) {
+    return fallback
+  }
+
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: value >= 1e12 ? 2 : 1 }).format(
+    value / 1e12,
+  )} TB`
+}
+
+/** Reported in GiB, which is how a 16 GB stick of RAM actually reads. */
+function formatGigabytes(value: number | null, fallback: string) {
+  if (value === null || !Number.isFinite(value)) {
+    return fallback
+  }
+
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value / 1024 ** 3)} GB`
+}
+
+/** Counts stay exact -- "7,115 episodes" is more interesting than "7K". */
+function formatExactNumber(value: number | null, fallback: string) {
+  if (value === null || !Number.isFinite(value)) {
+    return fallback
+  }
+
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value)
+}
+
+/**
+ * Prefer the published snapshot, but fall back to the last set of numbers
+ * measured off the exporters so the section never renders empty.
+ */
+function pick(value: number | null | undefined, fallback: number) {
+  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
+}
+
+function MetricRow({
+  label,
+  value,
+  accent,
+}: Readonly<{ label: string; value: string; accent: FlowAccent }>) {
+  return (
+    <div className="flex items-baseline justify-between gap-4 border-b border-[var(--line)] py-2.5 last:border-b-0">
+      <span className="text-sm text-[var(--ink-soft)]">{label}</span>
+      <span className="text-sm font-semibold tabular-nums text-[var(--ink-strong)]" style={{ color: accentMap[accent] }}>
+        {value}
+      </span>
+    </div>
+  )
+}
+
+function ProgressMeter({
+  ratio,
+  accent,
+}: Readonly<{ ratio: number; accent: FlowAccent }>) {
+  const clamped = Math.min(Math.max(ratio, 0), 1)
+
+  return (
+    <div
+      className="mt-4 h-2.5 w-full overflow-hidden rounded-full"
+      style={{ background: 'color-mix(in srgb, var(--ink) 8%, transparent)' }}
+      role="img"
+      aria-label={`${Math.round(clamped * 100)} percent used`}
+    >
+      <div
+        className="h-full rounded-full"
+        style={{
+          width: `${clamped * 100}%`,
+          background: `linear-gradient(90deg, color-mix(in srgb, ${accentMap[accent]} 70%, transparent), ${accentMap[accent]})`,
+        }}
+      />
+    </div>
+  )
+}
+
+function ExporterMetricsSection({ snapshot }: Readonly<{ snapshot: DashboardSnapshot | null }>) {
+  const library = snapshot?.library
+  const infra = snapshot?.infrastructure
+
+  const movies = pick(library?.movies, fallbackLibraryMetrics.movies)
+  const moviesDownloaded = pick(library?.moviesDownloaded, fallbackLibraryMetrics.moviesDownloaded)
+  const moviesMissing = pick(library?.moviesMissing, fallbackLibraryMetrics.moviesMissing)
+  const movieBytes = pick(library?.movieBytes, fallbackLibraryMetrics.movieBytes)
+  const series = pick(library?.series, fallbackLibraryMetrics.series)
+  const seasons = pick(library?.seasons, fallbackLibraryMetrics.seasons)
+  const episodes = pick(library?.episodes, fallbackLibraryMetrics.episodes)
+  const episodesDownloaded = pick(library?.episodesDownloaded, fallbackLibraryMetrics.episodesDownloaded)
+  const episodesMissing = pick(library?.episodesMissing, fallbackLibraryMetrics.episodesMissing)
+  const seriesBytes = pick(library?.seriesBytes, fallbackLibraryMetrics.seriesBytes)
+
+  const cpuCores = pick(infra?.cpuCores, fallbackInfrastructureMetrics.cpuCores)
+  const memoryTotalBytes = pick(infra?.memoryTotalBytes, fallbackInfrastructureMetrics.memoryTotalBytes)
+  const containersRunning = pick(infra?.containersRunning, fallbackInfrastructureMetrics.containersRunning)
+  const mediaTotalBytes = pick(infra?.mediaTotalBytes, fallbackInfrastructureMetrics.mediaTotalBytes)
+  const mediaFreeBytes = pick(infra?.mediaFreeBytes, fallbackInfrastructureMetrics.mediaFreeBytes)
+  const probesUp = pick(infra?.probesUp, fallbackInfrastructureMetrics.probesUp)
+  const probesTotal = pick(infra?.probesTotal, fallbackInfrastructureMetrics.probesTotal)
+  const indexersEnabled = pick(infra?.indexersEnabled, fallbackInfrastructureMetrics.indexersEnabled)
+  const indexerResponseMs = pick(infra?.indexerResponseMs, fallbackInfrastructureMetrics.indexerResponseMs)
+
+  const totalLibraryBytes = movieBytes + seriesBytes
+  const usedRatio = mediaTotalBytes > 0 ? (mediaTotalBytes - mediaFreeBytes) / mediaTotalBytes : 0
+  const episodeCompletion = episodes > 0 ? episodesDownloaded / episodes : 0
+
+  return (
+    <section className="surface-panel rounded-[36px] p-6 md:p-8">
+      <SectionHeading
+        eyebrow="Exporters"
+        title="The numbers Grafana already sees."
+        description="Prometheus scrapes the Radarr, Sonarr, and Prowlarr exporters alongside node-exporter and blackbox probes. These are the same series the Grafana dashboards are built on, pulled straight through to this page."
+      />
+
+      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {[
+          {
+            label: 'Movie library',
+            value: formatCompactNumber(movies, 'n/a'),
+            detail: `${formatCompactNumber(moviesDownloaded, '0')} downloaded, ${formatCompactNumber(moviesMissing, '0')} still missing.`,
+            accent: 'red' as const,
+          },
+          {
+            label: 'Series library',
+            value: formatCompactNumber(series, 'n/a'),
+            detail: `${formatExactNumber(seasons, '0')} seasons across ${formatExactNumber(episodes, '0')} tracked episodes.`,
+            accent: 'blue' as const,
+          },
+          {
+            label: 'On disk',
+            value: formatTerabytes(totalLibraryBytes, 'n/a'),
+            detail: `${formatTerabytes(movieBytes, 'n/a')} of movies and ${formatTerabytes(seriesBytes, 'n/a')} of television.`,
+            accent: 'yellow' as const,
+          },
+          {
+            label: 'Host',
+            value: `${formatCompactNumber(cpuCores, 'n/a')} cores`,
+            detail: `${formatGigabytes(memoryTotalBytes, 'n/a')} of RAM with ${formatCompactNumber(containersRunning, 'n/a')} containers running.`,
+            accent: 'red' as const,
+          },
+        ].map((item) => (
+          <div key={item.label} className="surface-card rounded-[28px] p-6">
+            <p className="retro-label mb-3" style={{ color: accentMap[item.accent] }}>
+              {item.label}
+            </p>
+            <p className="text-3xl font-semibold tracking-tight text-[var(--ink-strong)]">{item.value}</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--ink-soft)]">{item.detail}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-2">
+        <div className="surface-card rounded-[32px] p-6">
+          <p className="retro-label mb-3" style={{ color: accentMap.yellow }}>
+            Media pool
+          </p>
+          <p className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">
+            {formatTerabytes(mediaTotalBytes - mediaFreeBytes, 'n/a')} used of {formatTerabytes(mediaTotalBytes, 'n/a')}
+          </p>
+          <ProgressMeter ratio={usedRatio} accent="yellow" />
+          <p className="mt-4 text-sm leading-6 text-[var(--ink-soft)]">
+            Two media drives back the library. node-exporter reports the sizes, so this bar moves on its own as things get
+            added or cleaned up.
+          </p>
+          <div className="mt-4">
+            <MetricRow label="Free space" value={formatTerabytes(mediaFreeBytes, 'n/a')} accent="yellow" />
+            <MetricRow label="Pool used" value={`${Math.round(usedRatio * 100)}%`} accent="yellow" />
+          </div>
+        </div>
+
+        <div className="surface-card rounded-[32px] p-6">
+          <p className="retro-label mb-3" style={{ color: accentMap.blue }}>
+            Pipeline health
+          </p>
+          <p className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">
+            {formatCompactNumber(probesUp, '0')}/{formatCompactNumber(probesTotal, '0')} probes up
+          </p>
+          <ProgressMeter ratio={probesTotal > 0 ? probesUp / probesTotal : 0} accent="blue" />
+          <p className="mt-4 text-sm leading-6 text-[var(--ink-soft)]">
+            Blackbox probes the front-end services on a loop while the Prowlarr exporter reports how the indexer pool is
+            behaving.
+          </p>
+          <div className="mt-4">
+            <MetricRow label="Indexers enabled" value={formatCompactNumber(indexersEnabled, 'n/a')} accent="blue" />
+            <MetricRow
+              label="Avg indexer response"
+              value={`${formatCompactNumber(indexerResponseMs, 'n/a')} ms`}
+              accent="blue"
+            />
+            <MetricRow
+              label="Episode completion"
+              value={`${Math.round(episodeCompletion * 100)}%`}
+              accent="blue"
+            />
+            <MetricRow label="Episodes missing" value={formatExactNumber(episodesMissing, '0')} accent="blue" />
+          </div>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 export default async function Page() {
   const { dashboard, source, snapshot } = await getServerDashboardData()
   const activityWeekOccurrences = new Map<string, number>()
@@ -1052,6 +1253,8 @@ export default async function Page() {
           </div>
         </div>
       </section>
+
+      <ExporterMetricsSection snapshot={snapshot} />
 
       <TimeSeriesSection snapshot={snapshot} />
 

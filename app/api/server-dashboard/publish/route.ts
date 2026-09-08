@@ -59,8 +59,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Dashboard publish body does not match the expected snapshot shape.' }, { status: 400 })
   }
 
+  // The blob store is configured for private access, so the snapshot is written
+  // privately and read back server-side with the store token.
   const blob = await put(DASHBOARD_SNAPSHOT_BLOB_PATH, body, {
-    access: 'public',
+    access: 'private',
     addRandomSuffix: false,
     contentType: 'application/json',
     cacheControlMaxAge: 60,
