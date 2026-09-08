@@ -23,6 +23,8 @@ export async function GET() {
     requests: view.requests,
     downloads: view.downloads,
     system: view.system,
+    media: view.media,
+    recentlyAdded: view.recentlyAdded,
     drives: view.drives,
     history: view.history,
   })
