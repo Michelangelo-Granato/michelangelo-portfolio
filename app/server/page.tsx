@@ -147,7 +147,7 @@ const stackFlowNodes: readonly FlowNode[] = [
     id: 'playback',
     badge: 'Library',
     title: 'Library goes live',
-    subtitle: 'Plex / Jellyfin / Tautulli',
+    subtitle: 'Jellyfin',
     readout: 'streams + watch time',
     accent: 'red',
     x: 852,
@@ -159,7 +159,7 @@ const stackFlowNodes: readonly FlowNode[] = [
     id: 'observability',
     badge: 'Private lane',
     title: 'Observability feeds the dashboard',
-    subtitle: 'Prometheus / Grafana / Dozzle / Tautulli',
+    subtitle: 'Prometheus / Grafana / Dozzle',
     readout: 'cpu + disk + uptime + playback',
     accent: 'yellow',
     x: 120,
@@ -733,7 +733,7 @@ function TimeSeriesSection({ snapshot }: Readonly<{ snapshot: DashboardSnapshot 
               {
                 label: 'Latest stream count',
                 value: formatCompactNumber(latestPoint.activeStreams, '0'),
-                detail: 'What Tautulli most recently saw as active.',
+                detail: 'What Jellyfin most recently saw as active.',
                 accent: 'red' as const,
               },
               {
@@ -1144,7 +1144,7 @@ export default async function Page() {
           <SectionHeading
             eyebrow="Media telemetry"
             title="The fun media stats."
-            description="This is the kind of stuff I want from Plex, Jellyfin, and Tautulli because it makes the server feel less like a pile of containers and more like something people are genuinely using."
+            description="This is the kind of stuff I want from Jellyfin because it makes the server feel less like a pile of containers and more like something people are genuinely using."
           />
           <div className="grid gap-4">
             {dashboard.media.map((item) => (
@@ -1326,7 +1326,7 @@ export default async function Page() {
         <SectionHeading
           eyebrow="Integration plan"
           title="Where I want to take this next."
-          description="Right now this page can fall back to a curated snapshot, but the next step is wiring in more live data from Tautulli, Jellyfin, Prometheus, qBittorrent, and the request stack so it feels like a real dashboard instead of just a static case study."
+          description="The page already runs on live data from Prometheus, the *arr exporters, qBittorrent, and the request stack. Jellyfin playback stats are the last piece still waiting on an API key."
         />
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {dashboard.integrations.map((step, index) => {

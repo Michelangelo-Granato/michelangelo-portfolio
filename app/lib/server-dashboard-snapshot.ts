@@ -66,7 +66,8 @@ export interface DashboardSnapshot {
   generatedAt: string
   services: {
     jellyfin: { healthy: boolean }
-    plex: { healthy: boolean }
+    /** Legacy: the library moved to Jellyfin, so the collector no longer reports Plex. */
+    plex?: { healthy: boolean }
     seerr: { healthy: boolean }
     radarr: { healthy: boolean }
     sonarr: { healthy: boolean }
@@ -201,7 +202,7 @@ export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot 
   return (
     typeof snapshot.generatedAt === 'string' &&
     isBooleanRecord(snapshot.services?.jellyfin) &&
-    isBooleanRecord(snapshot.services?.plex) &&
+    (snapshot.services?.plex === undefined || isBooleanRecord(snapshot.services.plex)) &&
     isBooleanRecord(snapshot.services?.seerr) &&
     isBooleanRecord(snapshot.services?.radarr) &&
     isBooleanRecord(snapshot.services?.sonarr) &&
@@ -328,14 +329,6 @@ function buildJellyfinServiceDetail(snapshot: DashboardSnapshot) {
   return 'Healthy and serving the public playback surface for the library.'
 }
 
-function buildPlexServiceDetail(snapshot: DashboardSnapshot) {
-  if (hasNumber(snapshot.media.watchTimeHours7d)) {
-    return `Healthy, with ${formatHours(snapshot.media.watchTimeHours7d, '7d usage')} of watch time in the last week flowing into Tautulli.`
-  }
-
-  return 'Healthy, with Tautulli ready to surface watch history and active session data.'
-}
-
 function buildSeerrServiceDetail(snapshot: DashboardSnapshot) {
   if (hasNumber(snapshot.requests.pending)) {
     return `Healthy and currently tracking ${formatPluralizedMetric(snapshot.requests.pending, 'live', 'pending request')}.`
@@ -371,7 +364,6 @@ function buildPrometheusServiceDetail(snapshot: DashboardSnapshot) {
 function buildServiceDetails(snapshot: DashboardSnapshot) {
   return {
     jellyfin: buildJellyfinServiceDetail(snapshot),
-    plex: buildPlexServiceDetail(snapshot),
     seerr: buildSeerrServiceDetail(snapshot),
     radarrSonarr: buildRadarrSonarrServiceDetail(snapshot),
     prowlarr:
@@ -452,7 +444,7 @@ function buildSnapshotMedia(snapshot: DashboardSnapshot) {
     ? `${formatCount(snapshot.media.activeStreams, '0')} active · ${formatHours(snapshot.media.watchTimeHours7d, 'n/a')} / 7d`
     : fallbackServerDashboard.media[2].value
   const playbackDescription = hasNumber(snapshot.media.activeStreams)
-    ? `Tautulli is currently reporting ${formatPluralizedMetric(snapshot.media.activeStreams, '0', 'active stream')} in the latest sample.`
+    ? `Jellyfin is currently reporting ${formatPluralizedMetric(snapshot.media.activeStreams, '0', 'active stream')} in the latest sample.`
     : fallbackServerDashboard.media[2].description
   const transcodeValue = hasAnyNumber(snapshot.media.directPlays, snapshot.media.transcodes)
     ? `${formatCount(snapshot.media.directPlays, '0')} direct · ${formatCount(snapshot.media.transcodes, '0')} transcodes`
@@ -563,7 +555,6 @@ function buildSnapshotRequests(snapshot: DashboardSnapshot) {
 }
 
 function buildSnapshotContainers(snapshot: DashboardSnapshot) {
-  const plexStatus = snapshot.services.plex.healthy ? 'up' : 'down'
   const jellyfinStatus = snapshot.services.jellyfin.healthy ? 'up' : 'down'
   const seerrStatus = snapshot.services.seerr.healthy ? 'up' : 'down'
   const automationStatus = snapshot.services.radarr.healthy && snapshot.services.sonarr.healthy ? 'both responding' : 'partially degraded'
@@ -574,7 +565,7 @@ function buildSnapshotContainers(snapshot: DashboardSnapshot) {
   return [
     {
       ...fallbackServerDashboard.containers[0],
-      detail: `Plex is ${plexStatus}, Jellyfin is ${jellyfinStatus}, and Tautulli is feeding the playback snapshot.`,
+      detail: `Jellyfin is ${jellyfinStatus} and serving the library on its own now that Plex is out of the stack.`,
     },
     {
       ...fallbackServerDashboard.containers[1],
@@ -595,6 +586,15 @@ export function buildDashboardFromSnapshot(snapshot: DashboardSnapshot): ServerD
   const healthyServices = countHealthyServices(snapshot)
   const totalServices = Object.keys(snapshot.services).length
   const serviceDetails = buildServiceDetails(snapshot)
+  const serviceDetailsByName: Record<string, string> = {
+    Jellyfin: serviceDetails.jellyfin,
+    'Requests app': serviceDetails.seerr,
+    'Radarr + Sonarr': serviceDetails.radarrSonarr,
+    'Prowlarr + Flaresolverr': serviceDetails.prowlarr,
+    'qBittorrent + Unmanic': serviceDetails.qbittorrent,
+    'Grafana + Prometheus': serviceDetails.prometheus,
+    'Caddy + Tailscale + CrowdSec': serviceDetails.access,
+  }
 
   return {
     ...fallbackServerDashboard,
@@ -604,40 +604,12 @@ export function buildDashboardFromSnapshot(snapshot: DashboardSnapshot): ServerD
       tags: [...fallbackServerDashboard.intro.tags.slice(0, 4), 'Live telemetry'],
     },
     highlights: buildSnapshotHighlights(snapshot, healthyServices, totalServices),
-    services: [
-      {
-        ...fallbackServerDashboard.services[0],
-        detail: serviceDetails.jellyfin,
-      },
-      {
-        ...fallbackServerDashboard.services[1],
-        detail: serviceDetails.plex,
-      },
-      {
-        ...fallbackServerDashboard.services[2],
-        detail: serviceDetails.seerr,
-      },
-      {
-        ...fallbackServerDashboard.services[3],
-        detail: serviceDetails.radarrSonarr,
-      },
-      {
-        ...fallbackServerDashboard.services[4],
-        detail: serviceDetails.prowlarr,
-      },
-      {
-        ...fallbackServerDashboard.services[5],
-        detail: serviceDetails.qbittorrent,
-      },
-      {
-        ...fallbackServerDashboard.services[6],
-        detail: serviceDetails.prometheus,
-      },
-      {
-        ...fallbackServerDashboard.services[7],
-        detail: serviceDetails.access,
-      },
-    ],
+    // Keyed by name rather than array index so reordering or dropping a service
+    // cannot silently attach the wrong detail to the wrong card.
+    services: fallbackServerDashboard.services.map((service) => ({
+      ...service,
+      detail: serviceDetailsByName[service.name] ?? service.detail,
+    })),
     media: buildSnapshotMedia(snapshot),
     systems: buildSnapshotSystems(snapshot, healthyServices, totalServices),
     requests: buildSnapshotRequests(snapshot),

@@ -100,8 +100,8 @@ export const fallbackServerDashboard: ServerDashboardData = {
     eyebrow: 'Home server / homelab',
     title: 'Hey, I have a home server. Here is what is actually running on it.',
     description:
-      'This page is a friendlier view of the stack in my ServerSetup repo: Plex and Jellyfin for playback, the *arr stack plus qBittorrent for automation, Caddy and Tailscale for access, and a separate monitoring layer for the stats I actually want to see.',
-    tags: ['Plex + Jellyfin', 'Radarr / Sonarr', 'qBittorrent', 'Prometheus + Grafana', 'Tailscale'],
+      'This page is a friendlier view of the stack in my ServerSetup repo: Jellyfin for playback, the *arr stack plus qBittorrent for automation, Caddy and Tailscale for access, and a separate monitoring layer for the stats I actually want to see.',
+    tags: ['Jellyfin', 'Radarr / Sonarr', 'qBittorrent', 'Prometheus + Grafana', 'Tailscale'],
   },
   highlights: [
     {
@@ -124,8 +124,8 @@ export const fallbackServerDashboard: ServerDashboardData = {
     },
     {
       label: 'Observability',
-      value: 'Tautulli + Grafana',
-      detail: 'Playback analytics, host metrics, container stats, health checks, and service exporters all have a place in the setup.',
+      value: 'Jellyfin + Grafana',
+      detail: 'Playback activity, host metrics, container stats, health checks, and service exporters all have a place in the setup.',
       accent: 'red',
     },
   ],
@@ -137,13 +137,6 @@ export const fallbackServerDashboard: ServerDashboardData = {
       detail: 'The public playback surface I link out to here, backed by the same library and automation stack as the rest of the server.',
       href: 'https://watch.codebymic.com',
       accent: 'red',
-    },
-    {
-      name: 'Plex + Tautulli',
-      role: 'Playback and analytics',
-      status: 'Private',
-      detail: 'Plex is still part of the stack, and Tautulli is the obvious place to pull watch history, active sessions, and usage stats from.',
-      accent: 'yellow',
     },
     {
       name: 'Requests app',
@@ -206,7 +199,7 @@ export const fallbackServerDashboard: ServerDashboardData = {
     {
       title: 'Playback activity',
       value: 'Sessions + watch time',
-      description: 'This is where Tautulli and Jellyfin stats get interesting: active streams, total watch time, busiest days, and what devices people are actually using.',
+      description: 'This is where the Jellyfin stats get interesting: active streams, total watch time, busiest days, and what devices people are actually using.',
       accent: 'yellow',
     },
     {
@@ -271,7 +264,7 @@ export const fallbackServerDashboard: ServerDashboardData = {
     },
     {
       title: 'Apps',
-      items: ['Jellyfin', 'Plex', 'Requests UI', 'Homarr'],
+      items: ['Jellyfin', 'Requests UI', 'Homarr'],
       accent: 'blue',
     },
     {
@@ -281,13 +274,13 @@ export const fallbackServerDashboard: ServerDashboardData = {
     },
     {
       title: 'Data + telemetry',
-      items: ['media/', 'data/', 'Tautulli', 'Grafana / Prometheus', 'UrBackup / Syncthing'],
+      items: ['media/', 'data/', 'Grafana / Prometheus', 'UrBackup / Syncthing'],
       accent: 'red',
     },
   ],
   containers: [
     {
-      name: 'plex / jellyfin / tautulli',
+      name: 'jellyfin',
       purpose: 'Playback and viewing stats',
       detail: 'This is the entertainment side of the server: the actual playback apps plus the analytics layer that tells me how the library is being used.',
       accent: 'red',
@@ -314,7 +307,7 @@ export const fallbackServerDashboard: ServerDashboardData = {
   integrations: [
     {
       title: 'Playback sources',
-      description: 'Pull stream counts, watch time, and library growth from Tautulli and Jellyfin so the page reflects what people are actually watching.',
+      description: 'Pull stream counts, watch time, and library growth from Jellyfin so the page reflects what people are actually watching.',
     },
     {
       title: 'Request and download stats',
