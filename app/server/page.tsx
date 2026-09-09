@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
-import { Trace, type TracePoint } from 'app/components/trace'
+import { TelemetrySection } from 'app/components/telemetry'
 import { getServerSnapshot } from 'app/lib/server-dashboard'
 import {
   buildMetricsView,
@@ -12,7 +12,6 @@ import {
   formatTB,
   formatUptime,
   type Drive,
-  type MetricsView,
 } from 'app/lib/server-metrics'
 
 export const metadata: Metadata = {
@@ -237,17 +236,6 @@ function Arrow() {
   )
 }
 
-function clockLabel(timestamp: string) {
-  const date = new Date(timestamp)
-  return Number.isNaN(date.getTime())
-    ? ''
-    : new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: '2-digit' }).format(date)
-}
-
-function tracePoints(view: MetricsView, map: (point: MetricsView['history'][number]) => Record<string, number | null>): TracePoint[] {
-  return view.history.slice(-48).map((point) => ({ label: clockLabel(point.timestamp), values: map(point) }))
-}
-
 export default async function Page() {
   const { snapshot } = await getServerSnapshot()
   const view = buildMetricsView(snapshot)
@@ -268,6 +256,18 @@ export default async function Page() {
   // Releases carrying .exe/.scr payloads are the reason most imports stall.
   const unsafeBlocked = blocked.filter((item) => /executable|dangerous/i.test(item.reason)).length
   const oldestBlockedDays = blocked.reduce((max, item) => Math.max(max, item.ageDays ?? 0), 0)
+
+  // Seeds the first paint from the rolling history so the charts are never
+  // empty; the client immediately refetches the selected range from Prometheus.
+  const seedSeries = view.history
+    .map((point) => ({
+      t: Math.floor(new Date(point.timestamp).getTime() / 1000),
+      cpu: point.cpuPercent,
+      ram: point.memoryPercent,
+      netRx: point.netRxBytes ?? null,
+      netTx: point.netTxBytes ?? null,
+    }))
+    .filter((point) => Number.isFinite(point.t))
   const episodesPending = Math.max(library.episodes - library.episodesDownloaded - library.episodesMissing, 0)
 
   return (
@@ -348,25 +348,9 @@ export default async function Page() {
         <StatTile label="Indexers" value={formatCount(infra.indexersEnabled)} foot={`${formatCount(infra.indexerResponseMs)} ms average`} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[1.55fr_1fr]">
-        <Panel>
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-sm font-medium text-[var(--ink-soft)]">
-              Host load, last {Math.min(view.history.length, 48)} samples
-            </h2>
-            <span className="text-xs text-[var(--ink-soft)]">percent of capacity</span>
-          </div>
-          <Trace
-            points={tracePoints(view, (point) => ({ cpu: point.cpuPercent, ram: point.memoryPercent }))}
-            series={[
-              { key: 'cpu', name: 'CPU', color: 'var(--series-cpu)' },
-              { key: 'ram', name: 'Memory', color: 'var(--series-ram)' },
-            ]}
-            max={100}
-            format="percent"
-          />
-        </Panel>
+      <TelemetrySection initialPoints={seedSeries} />
 
+      <div className="grid gap-4 lg:grid-cols-2">
         <Panel>
           <ModuleLabel>Host</ModuleLabel>
           <div className="space-y-5">
@@ -396,6 +380,32 @@ export default async function Page() {
               color="var(--status-up)"
             />
           </div>
+          <div className="mt-5">
+            <MetricRow label="Disk read" value={formatRate(hostIo.diskReadBytes)} />
+            <MetricRow label="Disk write" value={formatRate(hostIo.diskWriteBytes)} />
+            <MetricRow label="CPU temperature" value={`${Math.round(hostIo.cpuTempC)}°C`} />
+            <MetricRow
+              label="Torrent queue"
+              value={`${formatCount(downloads.queueCount)} · ${formatRate(downloads.downloadRateBytes)}`}
+            />
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Drives</h2>
+            <span className="text-xs text-[var(--ink-soft)] [font-variant-numeric:tabular-nums]">
+              {Math.round(mediaRatio * 100)}% of {formatTB(infra.mediaTotalBytes)}
+            </span>
+          </div>
+          <div className="space-y-5">
+            {drives.map((drive) => (
+              <DriveBar key={drive.mount} drive={drive} />
+            ))}
+          </div>
+          <p className="mt-5 text-[11px] leading-5 text-[var(--ink-soft)]">
+            {formatTB(infra.mediaFreeBytes)} free across the pool.
+          </p>
         </Panel>
       </div>
 
@@ -415,57 +425,6 @@ export default async function Page() {
           <PipelineStage stage="Watchable" value={formatCount(requests.available)} label="fulfilled and in the library" />
         </div>
       </Panel>
-
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.55fr]">
-        <Panel>
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Drives</h2>
-            <span className="text-xs text-[var(--ink-soft)] [font-variant-numeric:tabular-nums]">
-              {Math.round(mediaRatio * 100)}% of {formatTB(infra.mediaTotalBytes)}
-            </span>
-          </div>
-          <div className="space-y-5">
-            {drives.map((drive) => (
-              <DriveBar key={drive.mount} drive={drive} />
-            ))}
-          </div>
-          <p className="mt-5 text-[11px] leading-5 text-[var(--ink-soft)]">
-            {formatTB(infra.mediaFreeBytes)} free across the pool.
-          </p>
-        </Panel>
-
-        <Panel>
-          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Throughput</h2>
-            <span className="text-xs text-[var(--ink-soft)]">whole host, not just downloads</span>
-          </div>
-          <Trace
-            // Host throughput started being recorded after the rest of the
-            // series, so drop the leading points that predate it rather than
-            // drawing a stub against a mostly-empty axis.
-            points={tracePoints(view, (point) => ({
-              rx: point.netRxBytes ?? null,
-              tx: point.netTxBytes ?? null,
-            })).filter((point) => point.values.rx !== null || point.values.tx !== null)}
-            series={[
-              { key: 'rx', name: 'Network in', color: 'var(--series-cpu)' },
-              { key: 'tx', name: 'Network out', color: 'var(--series-ram)' },
-            ]}
-            format="rate"
-            height={158}
-            emptyLabel="Collecting samples. Network throughput appears once a few have been recorded."
-          />
-          <div className="mt-4">
-            <MetricRow label="Disk read" value={formatRate(hostIo.diskReadBytes)} />
-            <MetricRow label="Disk write" value={formatRate(hostIo.diskWriteBytes)} />
-            <MetricRow label="CPU temperature" value={`${Math.round(hostIo.cpuTempC)}°C`} />
-            <MetricRow
-              label="Torrent queue"
-              value={`${formatCount(downloads.queueCount)} · ${formatRate(downloads.downloadRateBytes)}`}
-            />
-          </div>
-        </Panel>
-      </div>
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1.55fr]">
         <Panel>
