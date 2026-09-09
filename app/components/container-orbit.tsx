@@ -53,9 +53,17 @@ const ORBIT_SPACING = 0.26
 /** Keeps a five-container group from zooming in until it fills the frame. */
 const MIN_CLUSTER_EXTENT = 3.6
 
-/** Moons sweep faster than planets, which is what makes them read as moons. */
-const BASE_MOON_SPEED = 0.4
-const MOON_CPU_SPEED = 1.3
+/**
+ * Kepler's third law: orbital period grows with the three-halves power of the
+ * radius, so angular speed falls off as r^-1.5. An outer body sweeping round
+ * faster than an inner one is the thing that reads as wrong immediately, so
+ * speed is derived from the orbit rather than encoding anything itself.
+ */
+const KEPLER_EXPONENT = 1.5
+/** Anchors each system's innermost body, so every cluster keeps a similar
+ *  tempo while the falloff inside it stays physical. */
+const INNER_PLANET_SPEED = 0.4
+const INNER_MOON_SPEED = 1.1
 
 /**
  * A logarithmic spiral, stepped by the golden angle. That angle is what stops
@@ -70,9 +78,6 @@ const CLUSTER_GAP = 0.9
 
 /** How small a cluster sits while the whole galaxy is in frame. */
 const GALAXY_SCALE = 0.34
-
-const BASE_ANGULAR_SPEED = 0.055
-const CPU_ANGULAR_SPEED = 0.5
 
 /** Exponential smoothing rate for the zoom: roughly two thirds of the way
  *  there in a quarter second, settled by about a second. */
@@ -126,14 +131,9 @@ function bodySize(memoryBytes: number | null, peak: number, min: number, max: nu
   return min + Math.cbrt(memoryBytes / peak) * (max - min)
 }
 
-function moonSpeed(cpuPercent: number | null, peak: number) {
-  if (!cpuPercent || cpuPercent <= 0 || peak <= 0) return BASE_MOON_SPEED
-  return BASE_MOON_SPEED + Math.sqrt(Math.min(cpuPercent / peak, 1)) * MOON_CPU_SPEED
-}
-
-function angularSpeed(cpuPercent: number | null, peak: number) {
-  if (!cpuPercent || cpuPercent <= 0 || peak <= 0) return BASE_ANGULAR_SPEED
-  return BASE_ANGULAR_SPEED + Math.sqrt(Math.min(cpuPercent / peak, 1)) * CPU_ANGULAR_SPEED
+function keplerSpeed(radius: number, innerRadius: number, innerSpeed: number) {
+  if (radius <= 0 || innerRadius <= 0) return innerSpeed
+  return innerSpeed * (innerRadius / radius) ** KEPLER_EXPONENT
 }
 
 function readPalette(element: HTMLElement) {
@@ -180,7 +180,6 @@ export default function ContainerOrbit({
 
   const layout = useMemo(() => {
     const peakMemory = Math.max(...containers.map((entry) => entry.memoryBytes ?? 0), 1)
-    const peakCpu = Math.max(...containers.map((entry) => entry.cpuPercent ?? 0), 1)
     const present = CONTAINER_GROUPS.filter((group) => containers.some((entry) => entry.group === group))
     const peakGroupMemory = Math.max(
       ...present.map((group) =>
@@ -203,30 +202,40 @@ export default function ContainerOrbit({
       const primaries = byMemory.slice(0, planetCount)
       const satellites = byMemory.slice(planetCount)
 
-      const placed: PlacedPlanet[] = primaries.map((container, ringIndex) => ({
-        container,
-        ringIndex,
-        radius: 0,
-        size: bodySize(container.memoryBytes, peakMemory, MIN_PLANET, MAX_PLANET),
-        speed: angularSpeed(container.cpuPercent, peakCpu),
-        // Staggered rather than aligned, so the system does not start as a
-        // single spoke.
-        angle: ringIndex * 2.1,
-        moons: [] as PlacedMoon[],
-      }))
+      // Busiest first, so CPU decides how close to the star a container sits.
+      // Speed then falls out of the orbit by Kepler, which is what keeps the
+      // two consistent: the inner planets are the fast ones because they are
+      // the busy ones.
+      const placed: PlacedPlanet[] = [...primaries]
+        .sort((a, b) => (b.cpuPercent ?? 0) - (a.cpuPercent ?? 0))
+        .map((container, ringIndex) => ({
+          container,
+          ringIndex,
+          radius: 0,
+          size: bodySize(container.memoryBytes, peakMemory, MIN_PLANET, MAX_PLANET),
+          speed: 0,
+          // Staggered rather than aligned, so the system does not start as a
+          // single spoke.
+          angle: ringIndex * 2.1,
+          moons: [] as PlacedMoon[],
+        }))
 
-      // Round-robin so the moons spread evenly rather than piling onto one host.
+      // Round-robin so the moons spread evenly rather than piling onto one host,
+      // and busiest first so a moon's distance means the same as a planet's.
       const peakMoonMemory = Math.max(...satellites.map((entry) => entry.memoryBytes ?? 0), 1)
-      satellites.forEach((container, position) => {
+      const byCpu = [...satellites].sort((a, b) => (b.cpuPercent ?? 0) - (a.cpuPercent ?? 0))
+
+      byCpu.forEach((container, position) => {
         const host = placed[position % placed.length]
         if (!host) return
         const rank = host.moons.length
+        const orbit = host.size + MOON_CLEARANCE + rank * MOON_GAP
         host.moons.push({
           container,
-          orbit: host.size + MOON_CLEARANCE + rank * MOON_GAP,
+          orbit,
           size: bodySize(container.memoryBytes, peakMoonMemory, MIN_MOON, MAX_MOON),
-          speed: moonSpeed(container.cpuPercent, peakCpu),
-          angle: (rank / Math.max(satellites.length / placed.length, 1)) * Math.PI * 2 + position,
+          speed: keplerSpeed(orbit, host.size + MOON_CLEARANCE, INNER_MOON_SPEED),
+          angle: (rank / Math.max(byCpu.length / placed.length, 1)) * Math.PI * 2 + position,
         })
       })
 
@@ -248,6 +257,13 @@ export default function ContainerOrbit({
         planet.radius = radius
         ringRadii.push(radius)
         edge = radius + reach + ORBIT_SPACING
+      }
+
+      // Speeds are assigned once every radius is known, anchored to the
+      // innermost orbit so each system runs at a comparable pace.
+      const innerRadius = ringRadii[0] ?? STAR_CLEARANCE
+      for (const planet of placed) {
+        planet.speed = keplerSpeed(planet.radius, innerRadius, INNER_PLANET_SPEED)
       }
 
       const moonReach = placed.length > 0 ? footprint(placed[placed.length - 1]) : MAX_PLANET

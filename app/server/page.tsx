@@ -787,8 +787,8 @@ export default async function Page() {
                 </span>
               </div>
               <ul className="mt-4 space-y-2.5">
-                {blocked.slice(0, 5).map((item) => (
-                  <li key={`${item.source}-${item.title}`} className="border-b border-[var(--line)] pb-2.5 last:border-b-0 last:pb-0">
+                {blocked.slice(0, 5).map((item, index) => (
+                  <li key={`${item.source}-${item.title}-${index}`} className="border-b border-[var(--line)] pb-2.5 last:border-b-0 last:pb-0">
                     <div className="flex items-baseline justify-between gap-3">
                       <span className="min-w-0 flex-1 truncate text-sm text-[var(--ink)]" title={item.title}>
                         {item.title}

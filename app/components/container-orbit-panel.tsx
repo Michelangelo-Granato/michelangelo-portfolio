@@ -176,9 +176,9 @@ export function ContainerOrbitPanel({
           </>
         ) : activeGroup ? (
           <>
-            Size is resident memory and orbital speed is CPU share. The heaviest containers are the planets; the
-            lighter ones orbit them as moons, so no ring gets crowded. Click any body to pin it here, or click empty
-            space to go back.
+            Size is resident memory and distance from the star is CPU share, so the busiest containers orbit closest
+            and, by Kepler, fastest. The heaviest are the planets; lighter ones orbit them as moons. Click any body to
+            pin it here, or click empty space to go back.
             {busiest && ` Busiest in this group is ${busiest.name}.`}
           </>
         ) : (
