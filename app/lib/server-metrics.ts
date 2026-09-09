@@ -13,6 +13,7 @@ import {
 } from 'app/data/server'
 import type {
   BlockedImport,
+  ContainerSnapshot,
   DashboardSnapshot,
   GrowthPoint,
   QualityBucket,
@@ -74,6 +75,8 @@ export interface MetricsView {
   uptime: ServiceUptime[]
   /** Empty until the collector publishes the growth series. */
   growth: GrowthPoint[]
+  /** Empty until the collector can read per-container cgroup stats. */
+  containers: ContainerSnapshot[]
   history: HistoryPoint[]
 }
 
@@ -200,6 +203,7 @@ export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsVie
     // No fallbacks: an absent series is drawn as absent, never as invented history.
     uptime: snapshot?.uptime ?? [],
     growth: snapshot?.growth ?? [],
+    containers: snapshot?.containers ?? [],
     history: snapshot?.history ?? [],
   }
 }

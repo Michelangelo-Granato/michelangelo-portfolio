@@ -61,6 +61,20 @@ export interface ServiceUptime {
   daily: Array<number | null>
 }
 
+/** Containers are laid out in rings by group, so the ring carries meaning
+ *  rather than being decoration. */
+export const CONTAINER_GROUPS = ['media', 'monitoring', 'home', 'apps', 'infra'] as const
+export type ContainerGroup = (typeof CONTAINER_GROUPS)[number]
+
+/** One running container, measured from cgroup v2 on the host. */
+export interface ContainerSnapshot {
+  name: string
+  group: ContainerGroup
+  /** Percent of a single core, the same basis `docker stats` reports. */
+  cpuPercent: NullableNumber
+  memoryBytes: NullableNumber
+}
+
 /** A point on the library's growth curve, sampled daily. */
 export interface GrowthPoint {
   t: number
@@ -192,6 +206,8 @@ export interface DashboardSnapshot {
   uptime?: ServiceUptime[]
   /** Daily library size and counts, oldest first. */
   growth?: GrowthPoint[]
+  /** Running containers with their live CPU and memory, largest first. */
+  containers?: ContainerSnapshot[]
   history: Array<{
     timestamp: string
     cpuPercent: NullableNumber
@@ -295,6 +311,28 @@ function isOptionalUptimeList(value: unknown): value is ServiceUptime[] | undefi
   )
 }
 
+function isContainerGroup(value: unknown): value is ContainerGroup {
+  return typeof value === 'string' && (CONTAINER_GROUPS as ReadonlyArray<string>).includes(value)
+}
+
+function isOptionalContainerList(value: unknown): value is ContainerSnapshot[] | undefined {
+  if (value === undefined) return true
+  return (
+    Array.isArray(value) &&
+    value.every((entry) => {
+      if (!entry || typeof entry !== 'object') return false
+      const item = entry as Partial<ContainerSnapshot>
+      return (
+        typeof item.name === 'string' &&
+        item.name.length > 0 &&
+        isContainerGroup(item.group) &&
+        isNullableNumber(item.cpuPercent) &&
+        isNullableNumber(item.memoryBytes)
+      )
+    })
+  )
+}
+
 function isOptionalGrowthList(value: unknown): value is GrowthPoint[] | undefined {
   if (value === undefined) return true
   return (
@@ -392,6 +430,7 @@ export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot 
     isOptionalBlockedList(snapshot.blocked) &&
     isOptionalUptimeList(snapshot.uptime) &&
     isOptionalGrowthList(snapshot.growth) &&
+    isOptionalContainerList(snapshot.containers) &&
     Array.isArray(snapshot.history) &&
     snapshot.history.every((point) => isHistoryPoint(point))
   )

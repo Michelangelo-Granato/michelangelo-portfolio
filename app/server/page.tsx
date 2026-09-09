@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 
+import { ContainerOrbitPanel } from 'app/components/container-orbit-panel'
 import { TelemetrySection } from 'app/components/telemetry'
 import { Trace, type TracePoint } from 'app/components/trace'
 import { getServerSnapshot } from 'app/lib/server-dashboard'
@@ -402,6 +403,7 @@ export default async function Page() {
     stale,
     uptime,
     growth,
+    containers,
   } = view
 
   const libraryBytes = library.movieBytes + library.seriesBytes
@@ -831,6 +833,10 @@ export default async function Page() {
             emptyLabel="Collecting daily samples. The curve appears once the server has a few days of history."
           />
         </Panel>
+      )}
+
+      {containers.length > 0 && (
+        <ContainerOrbitPanel containers={containers} hostCpuPercent={system.cpuPercent} />
       )}
 
       <div className="grid gap-4 lg:grid-cols-2">
