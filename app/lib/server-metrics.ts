@@ -11,7 +11,7 @@ import {
   fallbackServiceStatus,
   fallbackSystemMetrics,
 } from 'app/data/server'
-import type { DashboardSnapshot, QualityBucket, StalledTorrent } from 'app/lib/server-dashboard-snapshot'
+import type { BlockedImport, DashboardSnapshot, QualityBucket } from 'app/lib/server-dashboard-snapshot'
 
 export type HistoryPoint = DashboardSnapshot['history'][number]
 
@@ -42,7 +42,7 @@ export interface MetricsView {
   recentlyAdded: string[]
   hostIo: typeof fallbackHostIo
   quality: QualityBucket[]
-  stalled: StalledTorrent[]
+  blocked: BlockedImport[]
   drives: Drive[]
   history: HistoryPoint[]
 }
@@ -122,9 +122,9 @@ export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsVie
     recentlyAdded: dedupe(snapshot?.media?.recentlyAdded ?? [...fallbackRecentlyAdded]),
     hostIo: mergeSection(snapshot?.hostIo, fallbackHostIo),
     quality: snapshot?.quality?.length ? snapshot.quality : [...fallbackQuality],
-    // No fallback: an empty list is a real answer, and inventing stalled
-    // downloads would be worse than showing none.
-    stalled: snapshot?.stalled ?? [],
+    // No fallback: an empty list is a real answer, and inventing blocked
+    // imports would be worse than showing none.
+    blocked: snapshot?.blocked ?? [],
     drives: buildDrives(snapshot),
     history: snapshot?.history ?? [],
   }

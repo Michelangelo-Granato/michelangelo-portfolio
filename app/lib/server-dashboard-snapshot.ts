@@ -55,13 +55,16 @@ export interface QualityBucket {
   count: number
 }
 
-/** An unfinished torrent that has not moved for a while. */
-export interface StalledTorrent {
-  name: string
-  state: string
-  progress: number
-  idleMinutes: number
-  sizeBytes: NullableNumber
+/**
+ * A download that finished but never reached the library. Radarr and Sonarr
+ * import automatically when a release is valid, so anything still queued with
+ * a warning is stuck — and they carry the reason.
+ */
+export interface BlockedImport {
+  source: string
+  title: string
+  reason: string
+  ageDays: NullableNumber
 }
 
 const HOST_IO_KEYS: ReadonlyArray<keyof HostIoSnapshot> = [
@@ -155,8 +158,8 @@ export interface DashboardSnapshot {
   hostIo?: HostIoSnapshot
   /** Downloaded films grouped by release quality, largest first. */
   quality?: QualityBucket[]
-  /** Unfinished torrents with no recent activity. */
-  stalled?: StalledTorrent[]
+  /** Finished downloads the *arr apps refused to import, with the reason. */
+  blocked?: BlockedImport[]
   history: Array<{
     timestamp: string
     cpuPercent: NullableNumber
@@ -254,19 +257,18 @@ function isOptionalQualityList(value: unknown): value is QualityBucket[] | undef
   )
 }
 
-function isOptionalStalledList(value: unknown): value is StalledTorrent[] | undefined {
+function isOptionalBlockedList(value: unknown): value is BlockedImport[] | undefined {
   if (value === undefined) return true
   return (
     Array.isArray(value) &&
     value.every((entry) => {
       if (!entry || typeof entry !== 'object') return false
-      const torrent = entry as Partial<StalledTorrent>
+      const item = entry as Partial<BlockedImport>
       return (
-        typeof torrent.name === 'string' &&
-        typeof torrent.state === 'string' &&
-        typeof torrent.progress === 'number' &&
-        typeof torrent.idleMinutes === 'number' &&
-        isNullableNumber(torrent.sizeBytes)
+        typeof item.source === 'string' &&
+        typeof item.title === 'string' &&
+        typeof item.reason === 'string' &&
+        isNullableNumber(item.ageDays)
       )
     })
   )
@@ -318,7 +320,7 @@ export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot 
     isOptionalDriveList(snapshot.drives) &&
     isOptionalMetricSection<HostIoSnapshot>(snapshot.hostIo, HOST_IO_KEYS) &&
     isOptionalQualityList(snapshot.quality) &&
-    isOptionalStalledList(snapshot.stalled) &&
+    isOptionalBlockedList(snapshot.blocked) &&
     Array.isArray(snapshot.history) &&
     snapshot.history.every((point) => isHistoryPoint(point))
   )

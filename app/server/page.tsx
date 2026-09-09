@@ -183,16 +183,6 @@ function QualityBars({ buckets }: Readonly<{ buckets: ReadonlyArray<{ label: str
   )
 }
 
-function formatIdle(minutes: number) {
-  if (minutes < 90) {
-    return `${Math.round(minutes)}m idle`
-  }
-  if (minutes < 60 * 48) {
-    return `${Math.round(minutes / 60)}h idle`
-  }
-  return `${Math.round(minutes / 1440)}d idle`
-}
-
 function MetricRow({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-[var(--line)] py-2 last:border-b-0">
@@ -261,7 +251,7 @@ function tracePoints(view: MetricsView, map: (point: MetricsView['history'][numb
 export default async function Page() {
   const { snapshot } = await getServerSnapshot()
   const view = buildMetricsView(snapshot)
-  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded, hostIo, quality, stalled } =
+  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded, hostIo, quality, blocked } =
     view
 
   const libraryBytes = library.movieBytes + library.seriesBytes
@@ -275,6 +265,9 @@ export default async function Page() {
   // flagged missing, is still unreleased or unaired.
   const moviesPending = Math.max(library.movies - library.moviesDownloaded - library.moviesMissing, 0)
   const ultraHd = quality.filter((bucket) => bucket.label.includes('2160')).reduce((sum, b) => sum + b.count, 0)
+  // Releases carrying .exe/.scr payloads are the reason most imports stall.
+  const unsafeBlocked = blocked.filter((item) => /executable|dangerous/i.test(item.reason)).length
+  const oldestBlockedDays = blocked.reduce((max, item) => Math.max(max, item.ageDays ?? 0), 0)
   const episodesPending = Math.max(library.episodes - library.episodesDownloaded - library.episodesMissing, 0)
 
   return (
@@ -538,10 +531,10 @@ export default async function Page() {
 
         <Panel>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Stalled downloads</h2>
-            <span className="text-xs text-[var(--ink-soft)]">no progress in 30+ minutes</span>
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Stuck downloads</h2>
+            <span className="text-xs text-[var(--ink-soft)]">finished but never imported</span>
           </div>
-          {stalled.length === 0 ? (
+          {blocked.length === 0 ? (
             <div className="flex items-center gap-2.5 rounded-lg border border-[var(--line)] px-3 py-2.5">
               <span
                 aria-hidden
@@ -551,37 +544,43 @@ export default async function Page() {
                   boxShadow: '0 0 0 3px color-mix(in srgb, var(--status-up) 18%, transparent)',
                 }}
               />
-              <span className="text-sm text-[var(--ink)]">Nothing stuck. Every unfinished download is moving.</span>
+              <span className="text-sm text-[var(--ink)]">Everything that finished made it into the library.</span>
             </div>
           ) : (
-            <ul className="space-y-3">
-              {stalled.map((torrent) => (
-                <li key={torrent.name}>
-                  <div className="flex items-baseline justify-between gap-3">
-                    <span className="min-w-0 flex-1 truncate text-sm text-[var(--ink)]" title={torrent.name}>
-                      {torrent.name}
-                    </span>
-                    <span className="shrink-0 text-xs font-semibold text-[var(--status-down)] [font-variant-numeric:tabular-nums]">
-                      {formatIdle(torrent.idleMinutes)}
-                    </span>
-                  </div>
-                  <div
-                    className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full"
-                    style={{ background: 'var(--chart-track)' }}
-                    role="img"
-                    aria-label={`${Math.round(torrent.progress * 100)} percent complete`}
-                  >
-                    <div
-                      className="h-full rounded-full"
-                      style={{ width: `${torrent.progress * 100}%`, background: 'var(--status-down)' }}
-                    />
-                  </div>
-                  <div className="mt-1 text-[11px] text-[var(--ink-soft)]">
-                    {Math.round(torrent.progress * 100)}% of {formatTB(torrent.sizeBytes ?? 0, 2)} · {torrent.state}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <>
+              <div className="flex items-baseline gap-3">
+                <span className="text-4xl font-semibold leading-none tracking-tight text-[var(--status-down)]">
+                  {formatCount(blocked.length)}
+                </span>
+                <span className="text-sm text-[var(--ink-soft)]">
+                  waiting on a decision{unsafeBlocked > 0 && `, ${formatCount(unsafeBlocked)} carrying executables`}
+                </span>
+              </div>
+              <ul className="mt-4 space-y-2.5">
+                {blocked.slice(0, 5).map((item) => (
+                  <li key={`${item.source}-${item.title}`} className="border-b border-[var(--line)] pb-2.5 last:border-b-0 last:pb-0">
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 flex-1 truncate text-sm text-[var(--ink)]" title={item.title}>
+                        {item.title}
+                      </span>
+                      {item.ageDays !== null && (
+                        <span className="shrink-0 text-xs text-[var(--ink-soft)] [font-variant-numeric:tabular-nums]">
+                          {formatCount(item.ageDays)}d
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-0.5 truncate text-[11px] text-[var(--ink-soft)]" title={item.reason}>
+                      {item.reason}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              {blocked.length > 5 && (
+                <p className="mt-3 text-[11px] text-[var(--ink-soft)]">
+                  and {formatCount(blocked.length - 5)} more, oldest waiting {formatCount(oldestBlockedDays)} days.
+                </p>
+              )}
+            </>
           )}
         </Panel>
       </div>
