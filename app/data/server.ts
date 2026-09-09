@@ -46,6 +46,27 @@ export const fallbackMediaMetrics = {
 
 export const fallbackRecentlyAdded: ReadonlyArray<string> = []
 
+/** Host throughput and thermals. */
+export const fallbackHostIo = {
+  netRxBytes: 0,
+  netTxBytes: 0,
+  diskReadBytes: 0,
+  diskWriteBytes: 0,
+  cpuTempC: 63,
+}
+
+/** How the downloaded films break down by release quality. */
+export const fallbackQuality: ReadonlyArray<{ label: string; count: number }> = [
+  { label: 'Remux-1080p', count: 47 },
+  { label: 'Bluray-1080p', count: 34 },
+  { label: 'WEBDL-1080p', count: 16 },
+  { label: 'Bluray-2160p', count: 13 },
+  { label: 'WEBRip-1080p', count: 9 },
+  { label: 'Remux-2160p', count: 2 },
+  { label: 'WEBDL-2160p', count: 2 },
+  { label: 'HDTV-1080p', count: 1 },
+]
+
 export const fallbackRequestMetrics = {
   total: 222,
   pending: 0,

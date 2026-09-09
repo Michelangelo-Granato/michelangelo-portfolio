@@ -41,6 +41,37 @@ export interface DriveSnapshot {
   freeBytes: NullableNumber
 }
 
+/** Whole-host throughput, which shows activity the download client misses. */
+export interface HostIoSnapshot {
+  netRxBytes: NullableNumber
+  netTxBytes: NullableNumber
+  diskReadBytes: NullableNumber
+  diskWriteBytes: NullableNumber
+  cpuTempC: NullableNumber
+}
+
+export interface QualityBucket {
+  label: string
+  count: number
+}
+
+/** An unfinished torrent that has not moved for a while. */
+export interface StalledTorrent {
+  name: string
+  state: string
+  progress: number
+  idleMinutes: number
+  sizeBytes: NullableNumber
+}
+
+const HOST_IO_KEYS: ReadonlyArray<keyof HostIoSnapshot> = [
+  'netRxBytes',
+  'netTxBytes',
+  'diskReadBytes',
+  'diskWriteBytes',
+  'cpuTempC',
+]
+
 const LIBRARY_KEYS: ReadonlyArray<keyof LibrarySnapshot> = [
   'movies',
   'moviesDownloaded',
@@ -120,6 +151,12 @@ export interface DashboardSnapshot {
   infrastructure?: InfrastructureSnapshot
   /** One entry per filesystem backing the media pool. */
   drives?: DriveSnapshot[]
+  /** Host network, disk and thermal readings. */
+  hostIo?: HostIoSnapshot
+  /** Downloaded films grouped by release quality, largest first. */
+  quality?: QualityBucket[]
+  /** Unfinished torrents with no recent activity. */
+  stalled?: StalledTorrent[]
   history: Array<{
     timestamp: string
     cpuPercent: NullableNumber
@@ -130,6 +167,8 @@ export interface DashboardSnapshot {
     availableRequests: NullableNumber
     downloadRateBytes: NullableNumber
     uploadRateBytes: NullableNumber
+    netRxBytes?: NullableNumber
+    netTxBytes?: NullableNumber
   }>
 }
 
@@ -201,6 +240,38 @@ function isOptionalDriveList(value: unknown): value is DriveSnapshot[] | undefin
   )
 }
 
+function isOptionalQualityList(value: unknown): value is QualityBucket[] | undefined {
+  if (value === undefined) return true
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        !!entry &&
+        typeof entry === 'object' &&
+        typeof (entry as QualityBucket).label === 'string' &&
+        typeof (entry as QualityBucket).count === 'number',
+    )
+  )
+}
+
+function isOptionalStalledList(value: unknown): value is StalledTorrent[] | undefined {
+  if (value === undefined) return true
+  return (
+    Array.isArray(value) &&
+    value.every((entry) => {
+      if (!entry || typeof entry !== 'object') return false
+      const torrent = entry as Partial<StalledTorrent>
+      return (
+        typeof torrent.name === 'string' &&
+        typeof torrent.state === 'string' &&
+        typeof torrent.progress === 'number' &&
+        typeof torrent.idleMinutes === 'number' &&
+        isNullableNumber(torrent.sizeBytes)
+      )
+    })
+  )
+}
+
 export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot {
   if (!value || typeof value !== 'object') {
     return false
@@ -245,6 +316,9 @@ export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot 
     isOptionalMetricSection<LibrarySnapshot>(snapshot.library, LIBRARY_KEYS) &&
     isOptionalMetricSection<InfrastructureSnapshot>(snapshot.infrastructure, INFRASTRUCTURE_KEYS) &&
     isOptionalDriveList(snapshot.drives) &&
+    isOptionalMetricSection<HostIoSnapshot>(snapshot.hostIo, HOST_IO_KEYS) &&
+    isOptionalQualityList(snapshot.quality) &&
+    isOptionalStalledList(snapshot.stalled) &&
     Array.isArray(snapshot.history) &&
     snapshot.history.every((point) => isHistoryPoint(point))
   )

@@ -150,6 +150,49 @@ function DriveBar({ drive }: Readonly<{ drive: Drive }>) {
   )
 }
 
+/** Magnitude comparison across many labels, so one hue rather than eight. */
+function QualityBars({ buckets }: Readonly<{ buckets: ReadonlyArray<{ label: string; count: number }> }>) {
+  const peak = Math.max(...buckets.map((bucket) => bucket.count), 1)
+
+  return (
+    <div className="space-y-2.5">
+      {buckets.map((bucket) => (
+        <div key={bucket.label}>
+          <div className="flex items-baseline justify-between gap-3">
+            <span className="font-[family-name:var(--font-geist-mono)] text-[11px] text-[var(--ink)]">
+              {bucket.label}
+            </span>
+            <span className="text-xs font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+              {formatCount(bucket.count)}
+            </span>
+          </div>
+          <div
+            className="mt-1 h-1.5 w-full overflow-hidden rounded-full"
+            style={{ background: 'var(--chart-track)' }}
+            role="img"
+            aria-label={`${bucket.label}: ${bucket.count} films`}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{ width: `${(bucket.count / peak) * 100}%`, background: 'var(--series-cpu)' }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function formatIdle(minutes: number) {
+  if (minutes < 90) {
+    return `${Math.round(minutes)}m idle`
+  }
+  if (minutes < 60 * 48) {
+    return `${Math.round(minutes / 60)}h idle`
+  }
+  return `${Math.round(minutes / 1440)}d idle`
+}
+
 function MetricRow({ label, value }: Readonly<{ label: string; value: string }>) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-[var(--line)] py-2 last:border-b-0">
@@ -218,7 +261,8 @@ function tracePoints(view: MetricsView, map: (point: MetricsView['history'][numb
 export default async function Page() {
   const { snapshot } = await getServerSnapshot()
   const view = buildMetricsView(snapshot)
-  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded } = view
+  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded, hostIo, quality, stalled } =
+    view
 
   const libraryBytes = library.movieBytes + library.seriesBytes
   const mediaUsed = infra.mediaTotalBytes - infra.mediaFreeBytes
@@ -230,6 +274,7 @@ export default async function Page() {
   // Whatever Radarr and Sonarr track but have not got yet, and that is not
   // flagged missing, is still unreleased or unaired.
   const moviesPending = Math.max(library.movies - library.moviesDownloaded - library.moviesMissing, 0)
+  const ultraHd = quality.filter((bucket) => bucket.label.includes('2160')).reduce((sum, b) => sum + b.count, 0)
   const episodesPending = Math.max(library.episodes - library.episodesDownloaded - library.episodesMissing, 0)
 
   return (
@@ -398,24 +443,31 @@ export default async function Page() {
 
         <Panel>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Transfer</h2>
-            <span className="text-xs text-[var(--ink-soft)]">
-              {formatCount(downloads.seedingCount)} seeding · {formatCount(downloads.downloadingCount)} active
-            </span>
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Throughput</h2>
+            <span className="text-xs text-[var(--ink-soft)]">whole host, not just downloads</span>
           </div>
           <Trace
             points={tracePoints(view, (point) => ({
-              down: point.downloadRateBytes,
-              up: point.uploadRateBytes,
+              rx: point.netRxBytes ?? null,
+              tx: point.netTxBytes ?? null,
             }))}
             series={[
-              { key: 'down', name: 'Down', color: 'var(--series-cpu)' },
-              { key: 'up', name: 'Up', color: 'var(--series-ram)' },
+              { key: 'rx', name: 'Network in', color: 'var(--series-cpu)' },
+              { key: 'tx', name: 'Network out', color: 'var(--series-ram)' },
             ]}
             format="rate"
-            height={186}
-            idleLabel="Idle. Nothing has moved through the download client in this window."
+            height={158}
+            emptyLabel="Collecting samples. Network throughput appears once a few have been recorded."
           />
+          <div className="mt-4">
+            <MetricRow label="Disk read" value={formatRate(hostIo.diskReadBytes)} />
+            <MetricRow label="Disk write" value={formatRate(hostIo.diskWriteBytes)} />
+            <MetricRow label="CPU temperature" value={`${Math.round(hostIo.cpuTempC)}°C`} />
+            <MetricRow
+              label="Torrent queue"
+              value={`${formatCount(downloads.queueCount)} · ${formatRate(downloads.downloadRateBytes)}`}
+            />
+          </div>
         </Panel>
       </div>
 
@@ -466,6 +518,67 @@ export default async function Page() {
                 </li>
               ))}
             </ol>
+          )}
+        </Panel>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[1fr_1.1fr]">
+        <Panel>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Film quality</h2>
+            <span className="text-xs text-[var(--ink-soft)] [font-variant-numeric:tabular-nums]">
+              {formatCount(ultraHd)} in 4K
+            </span>
+          </div>
+          <QualityBars buckets={quality} />
+        </Panel>
+
+        <Panel>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Stalled downloads</h2>
+            <span className="text-xs text-[var(--ink-soft)]">no progress in 30+ minutes</span>
+          </div>
+          {stalled.length === 0 ? (
+            <div className="flex items-center gap-2.5 rounded-lg border border-[var(--line)] px-3 py-2.5">
+              <span
+                aria-hidden
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{
+                  background: 'var(--status-up)',
+                  boxShadow: '0 0 0 3px color-mix(in srgb, var(--status-up) 18%, transparent)',
+                }}
+              />
+              <span className="text-sm text-[var(--ink)]">Nothing stuck. Every unfinished download is moving.</span>
+            </div>
+          ) : (
+            <ul className="space-y-3">
+              {stalled.map((torrent) => (
+                <li key={torrent.name}>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="min-w-0 flex-1 truncate text-sm text-[var(--ink)]" title={torrent.name}>
+                      {torrent.name}
+                    </span>
+                    <span className="shrink-0 text-xs font-semibold text-[var(--status-down)] [font-variant-numeric:tabular-nums]">
+                      {formatIdle(torrent.idleMinutes)}
+                    </span>
+                  </div>
+                  <div
+                    className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full"
+                    style={{ background: 'var(--chart-track)' }}
+                    role="img"
+                    aria-label={`${Math.round(torrent.progress * 100)} percent complete`}
+                  >
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${torrent.progress * 100}%`, background: 'var(--status-down)' }}
+                    />
+                  </div>
+                  <div className="mt-1 text-[11px] text-[var(--ink-soft)]">
+                    {Math.round(torrent.progress * 100)}% of {formatTB(torrent.sizeBytes ?? 0, 2)} · {torrent.state}
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
         </Panel>
       </div>
@@ -521,7 +634,18 @@ export default async function Page() {
         <Panel>
           <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
             <h2 className="text-sm font-medium text-[var(--ink-soft)]">Services</h2>
-            <span className="text-xs text-[var(--ink-soft)]">
+            <span className="flex items-center gap-2 text-xs text-[var(--ink-soft)]">
+              {infra.healthIssues > 0 && (
+                <span
+                  className="rounded-full px-2 py-0.5 text-[11px] font-medium"
+                  style={{
+                    color: 'var(--series-third)',
+                    border: '1px solid color-mix(in srgb, var(--series-third) 45%, var(--line))',
+                  }}
+                >
+                  {formatCount(infra.healthIssues)} health {infra.healthIssues === 1 ? 'warning' : 'warnings'}
+                </span>
+              )}
               {view.servicesUp} of {services.length} responding
             </span>
           </div>

@@ -1,7 +1,9 @@
 import {
   fallbackDownloadMetrics,
   fallbackDrives,
+  fallbackHostIo,
   fallbackMediaMetrics,
+  fallbackQuality,
   fallbackRecentlyAdded,
   fallbackInfrastructureMetrics,
   fallbackLibraryMetrics,
@@ -9,7 +11,7 @@ import {
   fallbackServiceStatus,
   fallbackSystemMetrics,
 } from 'app/data/server'
-import type { DashboardSnapshot } from 'app/lib/server-dashboard-snapshot'
+import type { DashboardSnapshot, QualityBucket, StalledTorrent } from 'app/lib/server-dashboard-snapshot'
 
 export type HistoryPoint = DashboardSnapshot['history'][number]
 
@@ -38,6 +40,9 @@ export interface MetricsView {
   system: typeof fallbackSystemMetrics
   media: typeof fallbackMediaMetrics
   recentlyAdded: string[]
+  hostIo: typeof fallbackHostIo
+  quality: QualityBucket[]
+  stalled: StalledTorrent[]
   drives: Drive[]
   history: HistoryPoint[]
 }
@@ -115,6 +120,11 @@ export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsVie
     system: mergeSection(snapshot?.system, fallbackSystemMetrics),
     media: mergeSection(snapshot?.media, fallbackMediaMetrics),
     recentlyAdded: dedupe(snapshot?.media?.recentlyAdded ?? [...fallbackRecentlyAdded]),
+    hostIo: mergeSection(snapshot?.hostIo, fallbackHostIo),
+    quality: snapshot?.quality?.length ? snapshot.quality : [...fallbackQuality],
+    // No fallback: an empty list is a real answer, and inventing stalled
+    // downloads would be worse than showing none.
+    stalled: snapshot?.stalled ?? [],
     drives: buildDrives(snapshot),
     history: snapshot?.history ?? [],
   }
