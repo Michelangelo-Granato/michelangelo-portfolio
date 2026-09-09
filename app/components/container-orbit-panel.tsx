@@ -11,7 +11,7 @@ const ContainerOrbit = dynamic(() => import('app/components/container-orbit'), {
   ssr: false,
   loading: () => (
     <div
-      className="flex h-[380px] w-full items-center justify-center rounded-xl border border-dashed border-[var(--line)] text-sm text-[var(--ink-soft)] md:h-[460px]"
+      className="flex h-[400px] w-full items-center justify-center rounded-xl border border-dashed border-[var(--line)] text-sm text-[var(--ink-soft)] md:h-[500px]"
       style={{ background: 'var(--chart-surface)' }}
     >
       Starting the renderer…
@@ -46,6 +46,7 @@ export function ContainerOrbitPanel({
   hostCpuPercent,
 }: Readonly<{ containers: ContainerSnapshot[]; hostCpuPercent: number }>) {
   const [visible, setVisible] = useState(false)
+  const [activeGroup, setActiveGroup] = useState<ContainerGroup | null>(null)
   const [selected, setSelected] = useState<ContainerSnapshot | null>(null)
   const anchorRef = useRef<HTMLDivElement | null>(null)
 
@@ -73,41 +74,98 @@ export function ContainerOrbitPanel({
     return () => observer.disconnect()
   }, [])
 
-  const handleSelect = useCallback((container: ContainerSnapshot | null) => setSelected(container), [])
+  const leaveGroup = useCallback(() => {
+    setActiveGroup(null)
+    setSelected(null)
+  }, [])
+
+  // Escape is the expected way out of a drill-in, and costs nothing to honour.
+  useEffect(() => {
+    if (!activeGroup) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') leaveGroup()
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [activeGroup, leaveGroup])
+
+  const handleSelectGroup = useCallback((group: ContainerGroup | null) => {
+    setActiveGroup(group)
+    setSelected(null)
+  }, [])
+
+  const handleSelectContainer = useCallback((container: ContainerSnapshot | null) => setSelected(container), [])
 
   const present = CONTAINER_GROUPS.filter((group) => containers.some((entry) => entry.group === group))
-  const busiest = [...containers].sort((a, b) => (b.cpuPercent ?? 0) - (a.cpuPercent ?? 0))[0]
+  const inGroup = activeGroup ? containers.filter((entry) => entry.group === activeGroup) : containers
+  const busiest = [...inGroup].sort((a, b) => (b.cpuPercent ?? 0) - (a.cpuPercent ?? 0))[0]
+  const rows = activeGroup ? inGroup : containers
 
   return (
     <section className="surface-card rounded-2xl p-5 md:p-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-        <h2 className="text-sm font-medium text-[var(--ink-soft)]">Running containers</h2>
+        <div className="flex flex-wrap items-baseline gap-3">
+          <h2 className="text-sm font-medium text-[var(--ink-soft)]">Running containers</h2>
+          {activeGroup && (
+            <button
+              type="button"
+              onClick={leaveGroup}
+              className="rounded-lg border border-[var(--line)] px-2.5 py-1 text-xs font-medium text-[var(--ink-strong)] transition-colors hover:bg-[var(--surface-2)]"
+            >
+              ← All groups
+            </button>
+          )}
+        </div>
         <span className="text-xs text-[var(--ink-soft)] [font-variant-numeric:tabular-nums]">
-          {containers.length} in orbit · size is memory, speed is CPU
+          {activeGroup
+            ? `${GROUP_LABEL[activeGroup]} · ${inGroup.length} containers`
+            : `${containers.length} across ${present.length} groups`}
         </span>
       </div>
 
       <div ref={anchorRef}>
         {visible ? (
-          <ContainerOrbit containers={containers} hostCpuPercent={hostCpuPercent} onSelect={handleSelect} />
+          <ContainerOrbit
+            containers={containers}
+            hostCpuPercent={hostCpuPercent}
+            activeGroup={activeGroup}
+            onSelectGroup={handleSelectGroup}
+            onSelectContainer={handleSelectContainer}
+          />
         ) : (
           <div
-            className="h-[380px] w-full rounded-xl border border-dashed border-[var(--line)] md:h-[460px]"
+            className="h-[400px] w-full rounded-xl border border-dashed border-[var(--line)] md:h-[500px]"
             style={{ background: 'var(--chart-surface)' }}
           />
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-        {present.map((group) => (
-          <span key={group} className="inline-flex items-center gap-1.5 text-xs text-[var(--ink-soft)]">
-            <span className="h-2 w-2 rounded-full" style={{ background: GROUP_SWATCH[group] }} />
-            {GROUP_LABEL[group]}
-            <span className="font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
-              {containers.filter((entry) => entry.group === group).length}
-            </span>
-          </span>
-        ))}
+      {/* Real buttons, because a raycaster on a canvas is unreachable by
+          keyboard and this is the only way in without a pointer. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {present.map((group) => {
+          const active = group === activeGroup
+          return (
+            <button
+              key={group}
+              type="button"
+              aria-pressed={active}
+              onClick={() => (active ? leaveGroup() : handleSelectGroup(group))}
+              className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs transition-colors"
+              style={{
+                borderColor: active ? GROUP_SWATCH[group] : 'var(--line)',
+                background: active ? `color-mix(in srgb, ${GROUP_SWATCH[group]} 14%, transparent)` : 'transparent',
+                color: active ? 'var(--ink-strong)' : 'var(--ink-soft)',
+              }}
+            >
+              <span className="h-2 w-2 rounded-full" style={{ background: GROUP_SWATCH[group] }} />
+              {GROUP_LABEL[group]}
+              <span className="font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+                {containers.filter((entry) => entry.group === group).length}
+              </span>
+            </button>
+          )
+        })}
       </div>
 
       <p className="mt-3 text-[11px] leading-5 text-[var(--ink-soft)]">
@@ -116,10 +174,16 @@ export function ContainerOrbitPanel({
             <span className="font-[family-name:var(--font-geist-mono)] text-[var(--ink)]">{selected.name}</span> —{' '}
             {(selected.cpuPercent ?? 0).toFixed(2)}% of one core, {formatMemory(selected.memoryBytes)} resident.
           </>
+        ) : activeGroup ? (
+          <>
+            Size is resident memory and orbital speed is CPU share. The heaviest containers are the planets; the
+            lighter ones orbit them as moons, so no ring gets crowded. Click any body to pin it here, or click empty
+            space to go back.
+            {busiest && ` Busiest in this group is ${busiest.name}.`}
+          </>
         ) : (
           <>
-            Each ring is one group; a planet&rsquo;s size is its resident memory and its orbital speed its CPU share.
-            Hover a planet for its name, or click to pin it here.
+            Each cluster is one group orbiting the host. Click one to drop into it, or use the buttons above.
             {busiest && ` Busiest right now is ${busiest.name}.`}
           </>
         )}
@@ -128,7 +192,9 @@ export function ContainerOrbitPanel({
       {/* A WebGL canvas is invisible to a screen reader, so the same figures
           stay available as text. */}
       <details className="mt-3 text-xs text-[var(--ink-soft)]">
-        <summary className="cursor-pointer select-none hover:text-[var(--ink)]">View as table</summary>
+        <summary className="cursor-pointer select-none hover:text-[var(--ink)]">
+          View as table{activeGroup ? ` (${GROUP_LABEL[activeGroup]})` : ''}
+        </summary>
         <div className="mt-2 max-h-64 overflow-y-auto">
           <table className="w-full text-left [font-variant-numeric:tabular-nums]">
             <thead className="text-[var(--ink-soft)]">
@@ -140,7 +206,7 @@ export function ContainerOrbitPanel({
               </tr>
             </thead>
             <tbody className="text-[var(--ink)]">
-              {containers.map((entry) => (
+              {rows.map((entry) => (
                 <tr key={entry.name} className="border-t border-[var(--line)]">
                   <td className="py-1 pr-4 font-[family-name:var(--font-geist-mono)]">{entry.name}</td>
                   <td className="py-1 pr-4">{GROUP_LABEL[entry.group]}</td>
