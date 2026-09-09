@@ -39,6 +39,34 @@ export interface DriveSnapshot {
   mount: string
   totalBytes: NullableNumber
   freeBytes: NullableNumber
+  /**
+   * Days until the filesystem fills, extrapolated from the last week of
+   * readings. Null when the trend is flat or rising, which is the common case
+   * and is not a prediction of "never" - just of "not from this data".
+   */
+  daysUntilFull?: NullableNumber
+  /** Signed bytes per day of change in free space: negative while filling. */
+  trendBytesPerDay?: NullableNumber
+}
+
+/**
+ * Rolling availability for one blackbox probe target. `daily` holds one
+ * fraction per day, oldest first, so the page can draw a strip without
+ * refetching; a null day is one Prometheus has no samples for.
+ */
+export interface ServiceUptime {
+  key: string
+  ratio: NullableNumber
+  latencyMs: NullableNumber
+  daily: Array<number | null>
+}
+
+/** A point on the library's growth curve, sampled daily. */
+export interface GrowthPoint {
+  t: number
+  libraryBytes: NullableNumber
+  movies: NullableNumber
+  episodes: NullableNumber
 }
 
 /** Whole-host throughput, which shows activity the download client misses. */
@@ -160,6 +188,10 @@ export interface DashboardSnapshot {
   quality?: QualityBucket[]
   /** Finished downloads the *arr apps refused to import, with the reason. */
   blocked?: BlockedImport[]
+  /** Per-service availability from the blackbox probes. */
+  uptime?: ServiceUptime[]
+  /** Daily library size and counts, oldest first. */
+  growth?: GrowthPoint[]
   history: Array<{
     timestamp: string
     cpuPercent: NullableNumber
@@ -237,7 +269,44 @@ function isOptionalDriveList(value: unknown): value is DriveSnapshot[] | undefin
       return (
         typeof drive.mount === 'string' &&
         isNullableNumber(drive.totalBytes) &&
-        isNullableNumber(drive.freeBytes)
+        isNullableNumber(drive.freeBytes) &&
+        (drive.daysUntilFull === undefined || isNullableNumber(drive.daysUntilFull)) &&
+        (drive.trendBytesPerDay === undefined || isNullableNumber(drive.trendBytesPerDay))
+      )
+    })
+  )
+}
+
+function isOptionalUptimeList(value: unknown): value is ServiceUptime[] | undefined {
+  if (value === undefined) return true
+  return (
+    Array.isArray(value) &&
+    value.every((entry) => {
+      if (!entry || typeof entry !== 'object') return false
+      const item = entry as Partial<ServiceUptime>
+      return (
+        typeof item.key === 'string' &&
+        isNullableNumber(item.ratio) &&
+        isNullableNumber(item.latencyMs) &&
+        Array.isArray(item.daily) &&
+        item.daily.every((day) => day === null || typeof day === 'number')
+      )
+    })
+  )
+}
+
+function isOptionalGrowthList(value: unknown): value is GrowthPoint[] | undefined {
+  if (value === undefined) return true
+  return (
+    Array.isArray(value) &&
+    value.every((entry) => {
+      if (!entry || typeof entry !== 'object') return false
+      const point = entry as Partial<GrowthPoint>
+      return (
+        typeof point.t === 'number' &&
+        isNullableNumber(point.libraryBytes) &&
+        isNullableNumber(point.movies) &&
+        isNullableNumber(point.episodes)
       )
     })
   )
@@ -321,6 +390,8 @@ export function isDashboardSnapshot(value: unknown): value is DashboardSnapshot 
     isOptionalMetricSection<HostIoSnapshot>(snapshot.hostIo, HOST_IO_KEYS) &&
     isOptionalQualityList(snapshot.quality) &&
     isOptionalBlockedList(snapshot.blocked) &&
+    isOptionalUptimeList(snapshot.uptime) &&
+    isOptionalGrowthList(snapshot.growth) &&
     Array.isArray(snapshot.history) &&
     snapshot.history.every((point) => isHistoryPoint(point))
   )

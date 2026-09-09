@@ -11,7 +11,13 @@ import {
   fallbackServiceStatus,
   fallbackSystemMetrics,
 } from 'app/data/server'
-import type { BlockedImport, DashboardSnapshot, QualityBucket } from 'app/lib/server-dashboard-snapshot'
+import type {
+  BlockedImport,
+  DashboardSnapshot,
+  GrowthPoint,
+  QualityBucket,
+  ServiceUptime,
+} from 'app/lib/server-dashboard-snapshot'
 
 export type HistoryPoint = DashboardSnapshot['history'][number]
 
@@ -26,6 +32,10 @@ export interface Drive {
   label: string
   totalBytes: number
   freeBytes: number
+  /** Null when the collector has no trend, or the drive is not filling. */
+  daysUntilFull: number | null
+  /** Signed bytes per day of change in free space; null when unknown. */
+  trendBytesPerDay: number | null
 }
 
 /** Which fields in a section fell back because the collector reported null.
@@ -60,6 +70,10 @@ export interface MetricsView {
   quality: QualityBucket[]
   blocked: BlockedImport[]
   drives: Drive[]
+  /** Empty until the collector publishes blackbox availability. */
+  uptime: ServiceUptime[]
+  /** Empty until the collector publishes the growth series. */
+  growth: GrowthPoint[]
   history: HistoryPoint[]
 }
 
@@ -88,7 +102,22 @@ function buildDrives(snapshot: DashboardSnapshot | null): Drive[] {
   const drives = source && source.length > 0 ? source : fallbackDrives
 
   return [...drives]
-    .map((drive) => ({ ...drive, label: driveLabel(drive.mount) }))
+    .map((drive) => ({
+      mount: drive.mount,
+      totalBytes: drive.totalBytes,
+      freeBytes: drive.freeBytes,
+      label: driveLabel(drive.mount),
+      daysUntilFull:
+        'daysUntilFull' in drive && typeof drive.daysUntilFull === 'number' && Number.isFinite(drive.daysUntilFull)
+          ? drive.daysUntilFull
+          : null,
+      trendBytesPerDay:
+        'trendBytesPerDay' in drive &&
+        typeof drive.trendBytesPerDay === 'number' &&
+        Number.isFinite(drive.trendBytesPerDay)
+          ? drive.trendBytesPerDay
+          : null,
+    }))
     .sort((a, b) => b.totalBytes - a.totalBytes)
 }
 
@@ -168,6 +197,9 @@ export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsVie
     // imports would be worse than showing none.
     blocked: snapshot?.blocked ?? [],
     drives: buildDrives(snapshot),
+    // No fallbacks: an absent series is drawn as absent, never as invented history.
+    uptime: snapshot?.uptime ?? [],
+    growth: snapshot?.growth ?? [],
     history: snapshot?.history ?? [],
   }
 }
@@ -178,6 +210,15 @@ export function formatCount(value: number) {
 
 export function formatTB(value: number, digits = 2) {
   return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: digits }).format(value / 1e12)} TB`
+}
+
+/** Picks the unit from the magnitude, so a week of growth reads as GB and a
+ *  library reads as TB rather than everything being a fraction of a terabyte. */
+export function formatBytes(value: number) {
+  const abs = Math.abs(value)
+  if (abs >= 1e12) return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value / 1e12)} TB`
+  if (abs >= 1e9) return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value / 1e9)} GB`
+  return `${new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value / 1e6)} MB`
 }
 
 export function formatGiB(value: number) {

@@ -2,10 +2,13 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 
 import { TelemetrySection } from 'app/components/telemetry'
+import { Trace, type TracePoint } from 'app/components/trace'
 import { getServerSnapshot } from 'app/lib/server-dashboard'
+import type { ServiceUptime } from 'app/lib/server-dashboard-snapshot'
 import {
   buildMetricsView,
   formatClock,
+  formatBytes,
   formatCount,
   formatGiB,
   formatRate,
@@ -177,6 +180,95 @@ function DriveBar({ drive }: Readonly<{ drive: Drive }>) {
         {formatTB(used)} used of {formatTB(drive.totalBytes)}
         {drive.freeBytes > 0 ? `, ${formatTB(drive.freeBytes)} free` : ' — full'}
       </div>
+      {drive.daysUntilFull !== null ? (
+        <div
+          className="mt-1 text-[11px] font-medium"
+          style={{ color: drive.daysUntilFull <= 30 ? 'var(--status-down)' : 'var(--ink-soft)' }}
+        >
+          {formatHorizon(drive.daysUntilFull)}
+        </div>
+      ) : (
+        drive.trendBytesPerDay !== null && (
+          <div className="mt-1 text-[11px] text-[var(--ink-soft)]">{formatTrend(drive.trendBytesPerDay)}</div>
+        )
+      )}
+    </div>
+  )
+}
+
+/** With no horizon to report, the direction of travel still is worth saying -
+ *  a drive recovering space is as much news as one running out. */
+function formatTrend(bytesPerDay: number) {
+  if (Math.abs(bytesPerDay) < 1e9) return 'Holding steady over the last few days'
+  const size = formatBytes(Math.abs(bytesPerDay))
+  return bytesPerDay > 0 ? `Freeing ${size} a day` : `Filling ${size} a day`
+}
+
+/** A projection is only as good as its window, so it is phrased as one. */
+function formatHorizon(days: number) {
+  if (days < 1) return 'Full within a day at the current rate'
+  if (days < 60) return `Full in about ${Math.round(days)} days at the current rate`
+  if (days < 730) return `Full in about ${Math.round(days / 30)} months at the current rate`
+  return 'Filling slowly; more than two years of headroom'
+}
+
+/**
+ * One bar per day of blackbox probe results, oldest first. A day with no
+ * samples is drawn in the track colour rather than skipped, so gaps in the
+ * monitoring are visible instead of silently compressing the timeline.
+ */
+function UptimeStrip({ daily }: Readonly<{ daily: Array<number | null> }>) {
+  return (
+    <div className="flex h-6 items-stretch gap-[2px]" aria-hidden>
+      {daily.map((day, index) => (
+        <div
+          key={index}
+          className="min-w-0 flex-1 rounded-[1px]"
+          style={{ background: day === null ? 'var(--chart-track)' : availabilitySeverity(day) }}
+          title={day === null ? 'no samples' : `${(day * 100).toFixed(1)}% up`}
+        />
+      ))}
+    </div>
+  )
+}
+
+function UptimeRow({
+  name,
+  up,
+  uptime,
+}: Readonly<{ name: string; up: boolean; uptime: ServiceUptime | undefined }>) {
+  return (
+    <div className="border-b border-[var(--line)] py-3 last:border-b-0">
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span
+            aria-hidden
+            className="h-2 w-2 shrink-0 rounded-full"
+            style={{
+              background: up ? 'var(--status-up)' : 'var(--status-down)',
+              boxShadow: up ? '0 0 0 3px color-mix(in srgb, var(--status-up) 18%, transparent)' : undefined,
+            }}
+          />
+          <span className="truncate text-sm text-[var(--ink)]">{name}</span>
+        </span>
+        <span className="flex shrink-0 items-baseline gap-3 text-xs [font-variant-numeric:tabular-nums]">
+          {uptime?.latencyMs !== null && uptime?.latencyMs !== undefined && (
+            <span className="text-[var(--ink-soft)]">{Math.round(uptime.latencyMs)} ms</span>
+          )}
+          {uptime?.ratio !== null && uptime?.ratio !== undefined ? (
+            <span className="font-semibold" style={{ color: availabilitySeverity(uptime.ratio) }}>
+              {(uptime.ratio * 100).toFixed(uptime.ratio >= 0.9995 ? 0 : 2)}%
+            </span>
+          ) : (
+            <span className="text-[var(--ink-soft)]">{up ? 'up' : 'down'}</span>
+          )}
+        </span>
+      </div>
+      {uptime && uptime.daily.length > 0 && (
+        <div className="mt-2">
+          <UptimeStrip daily={uptime.daily} />
+        </div>
+      )}
     </div>
   )
 }
@@ -294,8 +386,23 @@ function Arrow() {
 export default async function Page() {
   const { snapshot } = await getServerSnapshot()
   const view = buildMetricsView(snapshot)
-  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded, hostIo, quality, blocked, stale } =
-    view
+  const {
+    library,
+    infra,
+    requests,
+    downloads,
+    system,
+    services,
+    drives,
+    media,
+    recentlyAdded,
+    hostIo,
+    quality,
+    blocked,
+    stale,
+    uptime,
+    growth,
+  } = view
 
   const libraryBytes = library.movieBytes + library.seriesBytes
   const mediaUsed = infra.mediaTotalBytes - infra.mediaFreeBytes
@@ -314,6 +421,25 @@ export default async function Page() {
     requests.total > 0 ? Math.round((value / requests.total) * 100) : 0
   const approvedShare = percentOfRequests(requests.approved)
   const availableShare = percentOfRequests(requests.available)
+
+  const uptimeByKey = new Map(uptime.map((entry) => [entry.key, entry]))
+  const uptimeDays = uptime.reduce((max, entry) => Math.max(max, entry.daily.length), 0)
+
+  const growthFormatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+  const growthFirst = growth.find((point) => typeof point.libraryBytes === 'number')?.libraryBytes ?? null
+  const growthLast = [...growth].reverse().find((point) => typeof point.libraryBytes === 'number')?.libraryBytes ?? null
+  const growthAdded = growthFirst !== null && growthLast !== null ? growthLast - growthFirst : null
+  // Plotted as bytes added since the window opened, not absolute size: a week
+  // of growth against a multi-terabyte baseline is a flat line, and the change
+  // is the whole point of the panel.
+  const growthPoints: TracePoint[] =
+    growthFirst === null
+      ? []
+      : growth.map((point) => ({
+          label: growthFormatter.format(new Date(point.t * 1000)),
+          values: { bytes: point.libraryBytes === null ? null : point.libraryBytes - growthFirst },
+        }))
+  const growthStart = growth.length > 0 ? growthFormatter.format(new Date(growth[0].t * 1000)) : ''
   // Releases carrying .exe/.scr payloads are the reason most imports stall.
   const unsafeBlocked = blocked.filter((item) => /executable|dangerous/i.test(item.reason)).length
   const oldestBlockedDays = blocked.reduce((max, item) => Math.max(max, item.ageDays ?? 0), 0)
@@ -687,6 +813,26 @@ export default async function Page() {
         </Panel>
       </div>
 
+      {growthPoints.length >= 2 && (
+        <Panel>
+          <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
+            <h2 className="text-sm font-medium text-[var(--ink-soft)]">Library growth</h2>
+            <span className="text-xs text-[var(--ink-soft)]">
+              {growthAdded !== null
+                ? `${formatBytes(growthAdded)} added since ${growthStart} · ${formatTB(growthLast ?? 0)} on disk`
+                : 'daily samples'}
+            </span>
+          </div>
+          <Trace
+            points={growthPoints}
+            series={[{ key: 'bytes', name: `Added since ${growthStart}`, color: 'var(--series-cpu)' }]}
+            format="bytes"
+            height={200}
+            emptyLabel="Collecting daily samples. The curve appears once the server has a few days of history."
+          />
+        </Panel>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         <Panel>
           <ModuleLabel>What the library is made of</ModuleLabel>
@@ -753,14 +899,34 @@ export default async function Page() {
               {view.servicesUp} of {services.length} responding
             </span>
           </div>
-          <div className="grid gap-2 sm:grid-cols-2">
-            {services.map((service) => (
-              <Lamp key={service.key} name={service.name} up={service.up} />
-            ))}
-          </div>
+          {uptime.length > 0 ? (
+            <>
+              <div>
+                {services.map((service) => (
+                  <UptimeRow
+                    key={service.key}
+                    name={service.name}
+                    up={service.up}
+                    uptime={uptimeByKey.get(service.key)}
+                  />
+                ))}
+              </div>
+              <div className="mt-2 flex justify-between text-[11px] text-[var(--ink-soft)]">
+                <span>{uptimeDays} days ago</span>
+                <span>today</span>
+              </div>
+            </>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {services.map((service) => (
+                <Lamp key={service.key} name={service.name} up={service.up} />
+              ))}
+            </div>
+          )}
           <p className="mt-4 text-xs leading-5 text-[var(--ink-soft)]">
             Prometheus scrapes the Radarr, Sonarr and Prowlarr exporters alongside node-exporter and blackbox probes.
             The same series feed the Grafana dashboards on the private side.
+            {uptime.length > 0 && ' A service without a strip has no HTTP probe pointed at it.'}
           </p>
         </Panel>
       </div>
