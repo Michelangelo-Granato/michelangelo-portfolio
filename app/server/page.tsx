@@ -447,10 +447,13 @@ export default async function Page() {
             <span className="text-xs text-[var(--ink-soft)]">whole host, not just downloads</span>
           </div>
           <Trace
+            // Host throughput started being recorded after the rest of the
+            // series, so drop the leading points that predate it rather than
+            // drawing a stub against a mostly-empty axis.
             points={tracePoints(view, (point) => ({
               rx: point.netRxBytes ?? null,
               tx: point.netTxBytes ?? null,
-            }))}
+            })).filter((point) => point.values.rx !== null || point.values.tx !== null)}
             series={[
               { key: 'rx', name: 'Network in', color: 'var(--series-cpu)' },
               { key: 'tx', name: 'Network out', color: 'var(--series-ram)' },
