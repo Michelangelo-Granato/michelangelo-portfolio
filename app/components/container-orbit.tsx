@@ -131,6 +131,19 @@ function bodySize(memoryBytes: number | null, peak: number, min: number, max: nu
   return min + Math.cbrt(memoryBytes / peak) * (max - min)
 }
 
+/**
+ * Transparency in three.js does not imply "invisible to the depth buffer": a
+ * material at opacity zero still occludes whatever sits behind it unless depth
+ * writing is disabled. Kept on at full opacity so solid bodies still sort
+ * against each other correctly.
+ */
+function setFading(material: THREE.Material, opacity: number) {
+  const fading = opacity < 0.999
+  if (material.depthWrite === !fading) return
+  material.depthWrite = !fading
+  material.needsUpdate = true
+}
+
 function keplerSpeed(radius: number, innerRadius: number, innerSpeed: number) {
   if (radius <= 0 || innerRadius <= 0) return innerSpeed
   return innerSpeed * (innerRadius / radius) ** KEPLER_EXPONENT
@@ -609,6 +622,12 @@ export default function ContainerOrbit({
         cluster.guideMaterial.opacity = 0.42 * opacity
         cluster.root.visible = opacity > 0.01
 
+        // A transparent material still writes depth, so a nearly-invisible
+        // sphere goes on hiding whatever is behind it. Depth writing is turned
+        // off for exactly as long as a body is fading.
+        setFading(cluster.material, opacity)
+        setFading(cluster.starMaterial, opacity)
+
         if (!reduceMotion && cluster.root.visible) {
           for (const orbit of cluster.orbits) {
             const planet = orbit.userData.placed as PlacedPlanet
@@ -659,6 +678,7 @@ export default function ContainerOrbit({
 
       hostMaterial.opacity = 1 - maxFocus
       host.visible = hostMaterial.opacity > 0.01
+      setFading(hostMaterial, hostMaterial.opacity)
       if (!reduceMotion && host.visible) {
         host.scale.setScalar(1 + Math.sin(now / 900) * 0.02 + (hostCpuRef.current / 100) * 0.06)
       }
