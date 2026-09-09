@@ -29,6 +29,14 @@ function severity(ratio: number) {
   return 'var(--series-cpu)'
 }
 
+/** Availability reads the other way round from a fill: 7/7 is the only good
+ *  answer, so anything short of every probe passing has to show as a problem. */
+function availabilitySeverity(ratio: number) {
+  if (ratio >= 0.999) return 'var(--status-up)'
+  if (ratio >= 0.9) return 'var(--series-third)'
+  return 'var(--status-down)'
+}
+
 function Panel({ children, className = '' }: Readonly<{ children: React.ReactNode; className?: string }>) {
   return <section className={`surface-card rounded-2xl p-5 md:p-6 ${className}`}>{children}</section>
 }
@@ -37,12 +45,29 @@ function ModuleLabel({ children }: Readonly<{ children: React.ReactNode }>) {
   return <h2 className="mb-4 text-sm font-medium text-[var(--ink-soft)]">{children}</h2>
 }
 
-function StatTile({ label, value, foot }: Readonly<{ label: string; value: string; foot?: string }>) {
+/** `stale` means the collector returned null and a last-known figure is
+ *  standing in, so the value is dimmed and labelled rather than shown as live. */
+function StatTile({
+  label,
+  value,
+  foot,
+  stale = false,
+}: Readonly<{ label: string; value: string; foot?: string; stale?: boolean }>) {
   return (
     <div className="surface-card rounded-xl px-4 py-3.5">
-      <div className="text-2xl font-semibold tracking-tight text-[var(--ink-strong)]">{value}</div>
+      <div
+        className="text-2xl font-semibold tracking-tight"
+        style={{ color: stale ? 'var(--ink-soft)' : 'var(--ink-strong)' }}
+        title={stale ? 'Last known value: the collector could not read this.' : undefined}
+      >
+        {value}
+      </div>
       <div className="mt-0.5 text-xs text-[var(--ink-soft)]">{label}</div>
-      {foot && <div className="mt-1.5 text-[11px] text-[var(--ink-soft)]">{foot}</div>}
+      {stale ? (
+        <div className="mt-1.5 text-[11px] italic text-[var(--ink-soft)]">last known</div>
+      ) : (
+        foot && <div className="mt-1.5 text-[11px] text-[var(--ink-soft)]">{foot}</div>
+      )}
     </div>
   )
 }
@@ -53,14 +78,21 @@ function Meter({
   detail,
   ratio,
   color,
-}: Readonly<{ label: string; value: string; detail?: string; ratio: number; color?: string }>) {
+  stale = false,
+}: Readonly<{ label: string; value: string; detail?: string; ratio: number; color?: string; stale?: boolean }>) {
   const clamped = Math.min(Math.max(ratio, 0), 1)
 
   return (
     <div>
       <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm text-[var(--ink-soft)]">{label}</span>
-        <span className="text-sm font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+        <span className="text-sm text-[var(--ink-soft)]">
+          {label}
+          {stale && <span className="ml-1.5 text-[11px] italic">last known</span>}
+        </span>
+        <span
+          className="text-sm font-semibold [font-variant-numeric:tabular-nums]"
+          style={{ color: stale ? 'var(--ink-soft)' : 'var(--ink-strong)' }}
+        >
           {value}
         </span>
       </div>
@@ -182,11 +214,21 @@ function QualityBars({ buckets }: Readonly<{ buckets: ReadonlyArray<{ label: str
   )
 }
 
-function MetricRow({ label, value }: Readonly<{ label: string; value: string }>) {
+function MetricRow({
+  label,
+  value,
+  stale = false,
+}: Readonly<{ label: string; value: string; stale?: boolean }>) {
   return (
     <div className="flex items-baseline justify-between gap-4 border-b border-[var(--line)] py-2 last:border-b-0">
-      <span className="text-sm text-[var(--ink-soft)]">{label}</span>
-      <span className="text-sm font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+      <span className="text-sm text-[var(--ink-soft)]">
+        {label}
+        {stale && <span className="ml-1.5 text-[11px] italic">last known</span>}
+      </span>
+      <span
+        className="text-sm font-semibold [font-variant-numeric:tabular-nums]"
+        style={{ color: stale ? 'var(--ink-soft)' : 'var(--ink-strong)' }}
+      >
         {value}
       </span>
     </div>
@@ -210,9 +252,22 @@ function Lamp({ name, up }: Readonly<{ name: string; up: boolean }>) {
   )
 }
 
-function PipelineStage({ stage, value, label }: Readonly<{ stage: string; value: string; label: string }>) {
+/**
+ * A funnel stage. Width tracks the count relative to the first stage, so the
+ * drop-off is visible before you read a number. The floor keeps a nearly-empty
+ * stage legible instead of collapsing it to a sliver.
+ */
+function PipelineStage({
+  stage,
+  value,
+  label,
+  share,
+}: Readonly<{ stage: string; value: string; label: string; share: number }>) {
   return (
-    <div className="surface-card min-w-0 flex-1 rounded-xl px-4 py-3">
+    <div
+      className="surface-card min-w-0 rounded-xl px-4 py-3 md:min-w-[9rem]"
+      style={{ flexGrow: Math.max(share, 0.25), flexBasis: 0 }}
+    >
       <div className="text-[11px] text-[var(--ink-soft)]">{stage}</div>
       <div className="mt-1 text-xl font-semibold tracking-tight text-[var(--ink-strong)]">{value}</div>
       <div className="text-[11px] text-[var(--ink-soft)]">{label}</div>
@@ -239,7 +294,7 @@ function Arrow() {
 export default async function Page() {
   const { snapshot } = await getServerSnapshot()
   const view = buildMetricsView(snapshot)
-  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded, hostIo, quality, blocked } =
+  const { library, infra, requests, downloads, system, services, drives, media, recentlyAdded, hostIo, quality, blocked, stale } =
     view
 
   const libraryBytes = library.movieBytes + library.seriesBytes
@@ -247,12 +302,18 @@ export default async function Page() {
   const mediaRatio = infra.mediaTotalBytes > 0 ? mediaUsed / infra.mediaTotalBytes : 0
   const movieShare = libraryBytes > 0 ? library.movieBytes / libraryBytes : 0
   const loadPerCore = infra.cpuCores > 0 ? infra.load1 / infra.cpuCores : 0
+  const probeRatio = infra.probesTotal > 0 ? infra.probesUp / infra.probesTotal : 0
+  const probesDown = Math.max(infra.probesTotal - infra.probesUp, 0)
   const stamp = formatClock(view.generatedAt)
 
   // Whatever Radarr and Sonarr track but have not got yet, and that is not
   // flagged missing, is still unreleased or unaired.
   const moviesPending = Math.max(library.movies - library.moviesDownloaded - library.moviesMissing, 0)
   const ultraHd = quality.filter((bucket) => bucket.label.includes('2160')).reduce((sum, b) => sum + b.count, 0)
+  const percentOfRequests = (value: number) =>
+    requests.total > 0 ? Math.round((value / requests.total) * 100) : 0
+  const approvedShare = percentOfRequests(requests.approved)
+  const availableShare = percentOfRequests(requests.available)
   // Releases carrying .exe/.scr payloads are the reason most imports stall.
   const unsafeBlocked = blocked.filter((item) => /executable|dangerous/i.test(item.reason)).length
   const oldestBlockedDays = blocked.reduce((max, item) => Math.max(max, item.ageDays ?? 0), 0)
@@ -340,12 +401,42 @@ export default async function Page() {
       </header>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        <StatTile label="Movies" value={formatCount(library.movies)} foot={`${formatCount(library.moviesMissing)} missing`} />
-        <StatTile label="Series" value={formatCount(library.series)} foot={`${formatCount(library.seasons)} seasons`} />
-        <StatTile label="Episodes" value={formatCount(library.episodes)} foot={`${formatCount(library.episodesMissing)} missing`} />
-        <StatTile label="Requests" value={formatCount(requests.total)} foot={`${formatCount(requests.pending)} pending`} />
-        <StatTile label="Containers" value={formatCount(infra.containersRunning)} foot={`${formatCount(infra.cpuCores)} CPU cores`} />
-        <StatTile label="Indexers" value={formatCount(infra.indexersEnabled)} foot={`${formatCount(infra.indexerResponseMs)} ms average`} />
+        <StatTile
+          label="Movies"
+          value={formatCount(library.movies)}
+          foot={`${formatCount(library.moviesMissing)} missing`}
+          stale={stale.library.has('movies')}
+        />
+        <StatTile
+          label="Series"
+          value={formatCount(library.series)}
+          foot={`${formatCount(library.seasons)} seasons`}
+          stale={stale.library.has('series')}
+        />
+        <StatTile
+          label="Episodes"
+          value={formatCount(library.episodes)}
+          foot={`${formatCount(library.episodesMissing)} missing`}
+          stale={stale.library.has('episodes')}
+        />
+        <StatTile
+          label="Requests"
+          value={formatCount(requests.total)}
+          foot={`${formatCount(requests.pending)} pending`}
+          stale={stale.requests.has('total')}
+        />
+        <StatTile
+          label="Storage free"
+          value={formatTB(infra.mediaFreeBytes)}
+          foot={`of ${formatTB(infra.mediaTotalBytes)} pool`}
+          stale={stale.infra.has('mediaFreeBytes')}
+        />
+        <StatTile
+          label="Indexers"
+          value={formatCount(infra.indexersEnabled)}
+          foot={`${formatCount(infra.indexerResponseMs)} ms average`}
+          stale={stale.infra.has('indexersEnabled')}
+        />
       </div>
 
       <TelemetrySection initialPoints={seedSeries} />
@@ -359,34 +450,56 @@ export default async function Page() {
               value={`${Math.round(system.rootDiskPercent)}%`}
               ratio={system.rootDiskPercent / 100}
               detail="Operating system and container configuration"
+              stale={stale.system.has('rootDiskPercent')}
             />
             <Meter
               label="Memory"
               value={`${Math.round(system.memoryPercent)}%`}
               ratio={system.memoryPercent / 100}
               detail={`${formatGiB(infra.memoryTotalBytes)} installed`}
+              stale={stale.system.has('memoryPercent')}
             />
             <Meter
               label="Load average"
               value={infra.load1.toFixed(2)}
               ratio={loadPerCore}
               detail={`${Math.round(loadPerCore * 100)}% of ${formatCount(infra.cpuCores)} cores over one minute`}
+              stale={stale.infra.has('load1')}
             />
             <Meter
               label="Uptime checks"
               value={`${formatCount(infra.probesUp)}/${formatCount(infra.probesTotal)}`}
-              ratio={infra.probesTotal > 0 ? infra.probesUp / infra.probesTotal : 0}
-              detail="HTTP probes against the front-end services"
-              color="var(--status-up)"
+              ratio={probeRatio}
+              detail={
+                probesDown === 0
+                  ? 'Every HTTP probe against the front-end services is passing'
+                  : `${formatCount(probesDown)} of ${formatCount(infra.probesTotal)} HTTP probes failing`
+              }
+              color={availabilitySeverity(probeRatio)}
+              stale={stale.infra.has('probesUp')}
             />
           </div>
           <div className="mt-5">
-            <MetricRow label="Disk read" value={formatRate(hostIo.diskReadBytes)} />
-            <MetricRow label="Disk write" value={formatRate(hostIo.diskWriteBytes)} />
-            <MetricRow label="CPU temperature" value={`${Math.round(hostIo.cpuTempC)}°C`} />
+            <MetricRow
+              label="Disk read"
+              value={formatRate(hostIo.diskReadBytes)}
+              stale={stale.hostIo.has('diskReadBytes')}
+            />
+            <MetricRow
+              label="Disk write"
+              value={formatRate(hostIo.diskWriteBytes)}
+              stale={stale.hostIo.has('diskWriteBytes')}
+            />
+            <MetricRow
+              label="CPU temperature"
+              value={`${Math.round(hostIo.cpuTempC)}°C`}
+              stale={stale.hostIo.has('cpuTempC')}
+            />
+            <MetricRow label="CPU cores" value={formatCount(infra.cpuCores)} stale={stale.infra.has('cpuCores')} />
             <MetricRow
               label="Torrent queue"
-              value={`${formatCount(downloads.queueCount)} · ${formatRate(downloads.downloadRateBytes)}`}
+              value={`${formatCount(downloads.queueCount)} queued · ${formatCount(downloads.seedingCount)} seeding`}
+              stale={stale.downloads.has('queueCount')}
             />
           </div>
         </Panel>
@@ -412,17 +525,47 @@ export default async function Page() {
       <Panel>
         <ModuleLabel>How a request becomes something to watch</ModuleLabel>
         <div className="flex flex-col gap-2 md:flex-row md:items-stretch md:gap-3">
-          <PipelineStage stage="Asked for" value={formatCount(requests.total)} label="requests all time" />
-          <Arrow />
-          <PipelineStage stage="Searched" value={formatCount(infra.indexersEnabled)} label="indexers enabled" />
+          <PipelineStage stage="Asked for" value={formatCount(requests.total)} label="requests all time" share={1} />
           <Arrow />
           <PipelineStage
-            stage="Downloading"
-            value={formatCount(downloads.queueCount)}
-            label={`${formatRate(downloads.downloadRateBytes)} right now`}
+            stage="Approved"
+            value={formatCount(requests.approved)}
+            label={`${approvedShare}% of what was asked`}
+            share={requests.total > 0 ? requests.approved / requests.total : 1}
           />
           <Arrow />
-          <PipelineStage stage="Watchable" value={formatCount(requests.available)} label="fulfilled and in the library" />
+          <PipelineStage
+            stage="Watchable"
+            value={formatCount(requests.available)}
+            label={`${availableShare}% fulfilled and in the library`}
+            share={requests.total > 0 ? requests.available / requests.total : 1}
+          />
+        </div>
+        {/* The queue is a momentary reading, not a cumulative stage, so it sits
+            beside the funnel rather than inside it. */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[var(--line)] pt-3.5 text-[11px] text-[var(--ink-soft)]">
+          <span>
+            Moving through the queue right now:{' '}
+            <span className="font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+              {formatCount(downloads.queueCount)}
+            </span>{' '}
+            queued
+          </span>
+          <span>
+            <span className="font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+              {formatCount(downloads.downloadingCount)}
+            </span>{' '}
+            downloading at {formatRate(downloads.downloadRateBytes)}
+          </span>
+          <span>
+            <span className="font-semibold text-[var(--ink-strong)] [font-variant-numeric:tabular-nums]">
+              {formatCount(downloads.seedingCount)}
+            </span>{' '}
+            seeding at {formatRate(downloads.uploadRateBytes)}
+          </span>
+          <span>
+            {formatCount(requests.pending)} awaiting a decision · {formatCount(infra.indexersEnabled)} indexers searched
+          </span>
         </div>
       </Panel>
 

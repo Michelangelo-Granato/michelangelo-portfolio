@@ -28,9 +28,25 @@ export interface Drive {
   freeBytes: number
 }
 
+/** Which fields in a section fell back because the collector reported null.
+ *  The page dims these so a last-known figure is never read as a live one. */
+export type StaleKeys = ReadonlySet<string>
+
+export interface SectionStaleness {
+  library: StaleKeys
+  infra: StaleKeys
+  requests: StaleKeys
+  downloads: StaleKeys
+  system: StaleKeys
+  media: StaleKeys
+  hostIo: StaleKeys
+}
+
 export interface MetricsView {
   live: boolean
   generatedAt: string | null
+  /** Per-section sets of the keys whose values are fallbacks, not live reads. */
+  stale: SectionStaleness
   services: ServiceLamp[]
   servicesUp: number
   library: typeof fallbackLibraryMetrics
@@ -76,21 +92,30 @@ function buildDrives(snapshot: DashboardSnapshot | null): Drive[] {
     .sort((a, b) => b.totalBytes - a.totalBytes)
 }
 
-/** A published value wins only when it is an actual number; null means the
- *  collector could not reach that source, so the last known figure stands in. */
-function pick(value: number | null | undefined, fallback: number) {
-  return typeof value === 'number' && Number.isFinite(value) ? value : fallback
-}
-
+/**
+ * Merges a published section over its fallback, and reports which keys the
+ * collector could not supply. A substituted value is still shown - an empty
+ * dashboard is worse - but the caller can mark it as last-known rather than
+ * letting a stale figure pass for a live measurement.
+ */
 function mergeSection<T extends Record<string, number>>(
   source: Partial<Record<keyof T, number | null>> | undefined,
   fallback: T,
-): T {
-  const out = {} as T
+): { values: T; stale: Set<string> } {
+  const values = {} as T
+  const stale = new Set<string>()
+
   for (const key of Object.keys(fallback) as Array<keyof T>) {
-    out[key] = pick(source?.[key], fallback[key]) as T[keyof T]
+    const published = source?.[key]
+    if (typeof published === 'number' && Number.isFinite(published)) {
+      values[key] = published as T[keyof T]
+    } else {
+      values[key] = fallback[key]
+      stale.add(key as string)
+    }
   }
-  return out
+
+  return { values, stale }
 }
 
 function buildServices(snapshot: DashboardSnapshot | null): ServiceLamp[] {
@@ -108,19 +133,36 @@ function buildServices(snapshot: DashboardSnapshot | null): ServiceLamp[] {
 export function buildMetricsView(snapshot: DashboardSnapshot | null): MetricsView {
   const services = buildServices(snapshot)
 
+  const library = mergeSection(snapshot?.library, fallbackLibraryMetrics)
+  const infra = mergeSection(snapshot?.infrastructure, fallbackInfrastructureMetrics)
+  const requests = mergeSection(snapshot?.requests, fallbackRequestMetrics)
+  const downloads = mergeSection(snapshot?.downloads, fallbackDownloadMetrics)
+  const system = mergeSection(snapshot?.system, fallbackSystemMetrics)
+  const media = mergeSection(snapshot?.media, fallbackMediaMetrics)
+  const hostIo = mergeSection(snapshot?.hostIo, fallbackHostIo)
+
   return {
     live: snapshot !== null,
     generatedAt: snapshot?.generatedAt ?? null,
+    stale: {
+      library: library.stale,
+      infra: infra.stale,
+      requests: requests.stale,
+      downloads: downloads.stale,
+      system: system.stale,
+      media: media.stale,
+      hostIo: hostIo.stale,
+    },
     services,
     servicesUp: services.filter((service) => service.up).length,
-    library: mergeSection(snapshot?.library, fallbackLibraryMetrics),
-    infra: mergeSection(snapshot?.infrastructure, fallbackInfrastructureMetrics),
-    requests: mergeSection(snapshot?.requests, fallbackRequestMetrics),
-    downloads: mergeSection(snapshot?.downloads, fallbackDownloadMetrics),
-    system: mergeSection(snapshot?.system, fallbackSystemMetrics),
-    media: mergeSection(snapshot?.media, fallbackMediaMetrics),
+    library: library.values,
+    infra: infra.values,
+    requests: requests.values,
+    downloads: downloads.values,
+    system: system.values,
+    media: media.values,
     recentlyAdded: dedupe(snapshot?.media?.recentlyAdded ?? [...fallbackRecentlyAdded]),
-    hostIo: mergeSection(snapshot?.hostIo, fallbackHostIo),
+    hostIo: hostIo.values,
     quality: snapshot?.quality?.length ? snapshot.quality : [...fallbackQuality],
     // No fallback: an empty list is a real answer, and inventing blocked
     // imports would be worse than showing none.
