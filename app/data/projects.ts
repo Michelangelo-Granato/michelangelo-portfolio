@@ -53,6 +53,13 @@ export const projects: Project[] = [
         githubUrl: "https://github.com/Michelangelo-Granato/pairing-picker",
         demoUrl: "https://pairingpicker.vercel.app/",
     },
+    {
+        title: "FlightCalSync",
+        description: "A local-first app that imports flight attendant block schedule PDFs, parses the trips, and syncs them into Google Calendar with live flight status updates.",
+        longDescription: "FlightCalSync turns monthly block schedule PDFs into clean Google Calendar events. It parses trip data from uploaded or watched-folder PDFs, stores import history in SQLite, reconciles each import against the calendar, and checks live flight status through FlightAware AeroAPI to keep trip times current and flag cancellations.",
+        technologies: ["React", "Vite", "Fastify", "TypeScript", "SQLite", "Google Calendar API", "Vitest", "Playwright"],
+        githubUrl: "https://github.com/Michelangelo-Granato/flightcalsync",
+    },
     
     
 ];
